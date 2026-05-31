@@ -1,3 +1,7 @@
+---
+name: faq
+description: Use when the user asks about shipping times, shipping costs, return windows, exchange rules, international delivery, or refund timelines.
+---
 # NUIT FRAGRANCES: FAQ
 
 ## 1. GEOGRAPHIC FULFILLMENT SCOPE & SHIPPING TIMELINES

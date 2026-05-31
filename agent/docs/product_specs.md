@@ -1,3 +1,7 @@
+---
+name: product_specs
+description: Use when the user asks about specific fragrance classifications, olfactory notes (top/heart/base), bottle sizing (100ml, 250ml), ingredients, or application instructions.
+---
 # NUIT FRAGRANCES: GRANULAR PRODUCT SPECIFICATIONS & OLFACtORY ARCHITECTURE LEDGER
 
 ## 1. NUIT SIGNATURE EAU DE PARFUM (SKU-001) TECHNICAL SPECIFICATIONS

@@ -1,3 +1,7 @@
+---
+name: meta_ad_strat
+description: Use when the user references advertising campaigns, standard bundle pricing, or promo codes like NUIT_SHARK_DISCOVERY and SIGNATURE_UPGRADE_300.
+---
 # NUIT FRAGRANCES: FUNNEL CONVERSION MECHANICS, DATA ENDPOINTS & ADVERTISING COPY LEDGER
 # Document Control ID: NUIT-KB-01D-2026 | Data Classification: Internal Context Asset
 

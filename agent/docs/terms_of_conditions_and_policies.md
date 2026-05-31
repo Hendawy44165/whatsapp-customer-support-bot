@@ -1,3 +1,7 @@
+---
+name: terms_of_conditions_and_policies
+description: Use when verifying exact product variant lists, pricing tiers, detailed return disqualification lists, and transit damage validation steps.
+---
 # NUIT FRAGRANCES: PRODUCTS, LOGISTICS & TRANSACTIONAL POLICIES REFERENCE MANUAL
 # Document Control ID: NUIT-KB-01B-2026 | Data Classification: Internal Context Asset
 # Ground Truth Source: Official Nuit Fragrances Terms and Conditions & Refund Policies

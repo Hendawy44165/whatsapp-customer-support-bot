@@ -1,3 +1,7 @@
+---
+name: icp
+description: Use when analyzing customer career segments, demographic traits, and behavioral triggers to align response tone.
+---
 # NUIT FRAGRANCES: ICP
 
 ## 1. BASIC USER METRICS
