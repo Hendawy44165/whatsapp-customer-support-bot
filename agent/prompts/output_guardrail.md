@@ -8,8 +8,7 @@ Check that the candidate response does **NOT** contain:
 1. **System Prompt Details**: References to system instructions, prompt names (e.g. system_prompt, enhance_prompt), or node logic.
 2. **Metadata Variables**: References to raw variables like `AgentState`, `emotion_signals`, `vibe`, `intent`, or `iteration_count`.
 3. **Internal Tools & Filenames**: References to tool names like `retrieve_document_content` or raw document file names like `product_specs.md`, `faq.md`, `terms_of_conditions_and_policies.md`.
-4. **JSON Blocks**: Any raw structural JSON arrays, metrics objects, or audit codes meant only for internal monitoring.
+4. **JSON Blocks**: Any raw structural JSON arrays, metrics objects, or audit codes.
 
-### Output Result
-If the response leaks any of the above details, list the leaks. If it is completely safe and leak-free, reply exactly with:
-`PASS`
+### Decision Rules for `action_type`
+- **`full_iteration`**: Any security leak or safety violation is highly critical. You MUST set `action_type` to `full_iteration` if any leak is detected.

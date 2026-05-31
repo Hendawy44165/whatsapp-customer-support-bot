@@ -1,5 +1,5 @@
 import os
-from typing import Dict
+from typing import Dict, List
 from langgraph.graph.message import add_messages
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_openai import ChatOpenAI
@@ -9,7 +9,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langsmith import traceable
 
 # Local imports
-from agent.state import AgentState
+from agent.state import AgentState, ClassifierResult, EmotionAnalysisResult, AuditCheckResult
 from agent.constants import VALID_CATEGORIES, DIRECT_RESPONSES
 from agent.utils import DocumentAndPromptLoader
 
@@ -54,6 +54,24 @@ class CustomerServiceAgent:
         self.memory = MemorySaver()
         self.config = {"configurable": {"thread_id": "default-thread"}}
         
+        # Define the dynamic document retrieval tool
+        @tool
+        def retrieve_document_content(document_name: str) -> str:
+            """Retrieves the full content of a specific knowledge document by its name.
+            Available document names:
+            - 'faq': FAQ, shipping fees, shipping times, return windows, exchange rules, international delivery.
+            - 'icp': Customer career segments, demographic traits, and behavioral triggers.
+            - 'meta_ad_strat': Ad campaigns, Shark Tank Egypt, Discovery Box bundles, active promos.
+            - 'product_specs': Fragrance notes, classification, ingredients, bottle sizes, application protocols.
+            - 'terms_of_conditions_and_policies': Pricing matrix, variant names, return/refund exclusions, damaged item reporting.
+            - 'brand_identity': Brand voice guide, vocabulary list, and tone constraints.
+            - 'customer_service_sop': Standard operating procedures for customer service.
+            """
+            doc_name = document_name.strip().lower()
+            return self.loader.doc_registry.get(doc_name, f"Document '{document_name}' not found. Available documents: {list(self.loader.doc_registry.keys())}")
+            
+        self.retrieve_tool = retrieve_document_content
+        
         # Compile State Graph
         self.agent = self._compile_graph()
 
@@ -69,14 +87,16 @@ class CustomerServiceAgent:
             State updates containing the classified 'category'.
         """
         user_prompt = state["user_prompt"]
-        res = self.model.invoke([
+        structured_model = self.model.with_structured_output(ClassifierResult)
+        result = structured_model.invoke([
             SystemMessage(content=self.loader.classifier_prompt),
             HumanMessage(content=user_prompt)
-        ]).content.strip().lower()
+        ])
         
-        res = res.replace("`", "").strip()
-        category = res if res in VALID_CATEGORIES else "complex_uncategorized"
-        
+        category = result.category
+        if category not in VALID_CATEGORIES:
+            category = "complex_uncategorized"
+            
         return {"category": category}
 
     def _direct_response(self, state: AgentState) -> Dict:
@@ -114,20 +134,17 @@ class CustomerServiceAgent:
         history_text = "\n".join([f"{m.type}: {m.content}" for m in history[-5:]])
         
         prompt = f"Chat History:\n{history_text}\n\nUser Prompt: {user_prompt}"
-        res = self.model.invoke([
+        structured_model = self.model.with_structured_output(EmotionAnalysisResult)
+        result = structured_model.invoke([
             SystemMessage(content=self.loader.emotion_analysis_prompt),
             HumanMessage(content=prompt)
-        ]).content.strip()
+        ])
         
-        signals = {"vibe": "calm", "intent": "browsing", "reason": ""}
-        for line in res.splitlines():
-            if line.startswith("EMOTION:"):
-                signals["vibe"] = line.replace("EMOTION:", "").strip().lower()
-            elif line.startswith("INTENT:"):
-                signals["intent"] = line.replace("INTENT:", "").strip().lower()
-            elif line.startswith("REASON:"):
-                signals["reason"] = line.replace("REASON:", "").strip()
-                
+        signals = {
+            "vibe": result.vibe,
+            "intent": result.intent,
+            "reason": result.reason
+        }
         return {"emotion_signals": signals}
 
     def _enhance_prompt(self, state: AgentState) -> Dict:
@@ -176,20 +193,7 @@ class CustomerServiceAgent:
         """
         user_prompt = state["user_prompt"]
         
-        @tool
-        def retrieve_document_content(document_name: str) -> str:
-            """Retrieves the full content of a specific knowledge document by its name.
-            Available document names:
-            - 'faq': FAQ, shipping fees, shipping times, return windows, exchange rules, international delivery.
-            - 'icp': Customer career segments, demographic traits, and behavioral triggers.
-            - 'meta_ad_strat': Ad campaigns, Shark Tank Egypt, Discovery Box bundles, active promos.
-            - 'product_specs': Fragrance notes, classification, ingredients, bottle sizes, application protocols.
-            - 'terms_of_conditions_and_policies': Pricing matrix, variant names, return/refund exclusions, damaged item reporting.
-            """
-            doc_name = document_name.strip().lower()
-            return self.loader.doc_registry.get(doc_name, f"Document '{document_name}' not found. Available documents: {list(self.loader.doc_registry.keys())}")
-
-        model_with_tools = self.model.bind_tools([retrieve_document_content])
+        model_with_tools = self.model.bind_tools([self.retrieve_tool])
         
         signals = state.get("emotion_signals", {})
         emotion = signals.get("vibe", "calm")
@@ -247,7 +251,7 @@ class CustomerServiceAgent:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
                 if tool_name == "retrieve_document_content":
-                    content = retrieve_document_content.invoke(tool_args)
+                    content = self.retrieve_tool.invoke(tool_args)
                 else:
                     content = f"Unknown tool: {tool_name}"
                 
@@ -269,6 +273,49 @@ class CustomerServiceAgent:
             "response": content,
             "messages": new_messages
         }
+
+    def _run_single_audit(self, audit_type: str, system_prompt: str, evaluation_payload: str, use_tools: bool = True) -> AuditCheckResult:
+        """
+        Runs a single structured audit check, supporting agentic tool retrieval if enabled.
+        
+        Args:
+            audit_type: The label of the audit.
+            system_prompt: System prompt instructing the auditor.
+            evaluation_payload: The candidate response text and any dynamic inputs.
+            use_tools: Whether to bind retrieve_document_content tool.
+            
+        Returns:
+            The parsed structured AuditCheckResult.
+        """
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=evaluation_payload)
+        ]
+        
+        if use_tools:
+            model_with_tools = self.model.bind_tools([self.retrieve_tool])
+            for _ in range(3):
+                res = model_with_tools.invoke(messages)
+                if not res.tool_calls:
+                    break
+                messages.append(res)
+                for tool_call in res.tool_calls:
+                    tool_name = tool_call["name"]
+                    tool_args = tool_call["args"]
+                    if tool_name == "retrieve_document_content":
+                        content = self.retrieve_tool.invoke(tool_args)
+                    else:
+                        content = f"Unknown tool: {tool_name}"
+                    messages.append(ToolMessage(content=content, tool_call_id=tool_call["id"]))
+                    
+        structured_model = self.model.with_structured_output(AuditCheckResult)
+        result = structured_model.invoke(messages + [
+            SystemMessage(content=(
+                f"You are evaluating the candidate response for a '{audit_type}' audit. "
+                "Output the final schema-compliant AuditCheckResult now."
+            ))
+        ])
+        return result
 
     def _run_audits(self, state: AgentState) -> Dict:
         """
@@ -293,64 +340,51 @@ class CustomerServiceAgent:
         failed_checks = []
         audit_logs = list(state.get("audit_logs", []))
         
-        # Guard against empty candidate responses (e.g. if the generator loop fails or is blocked)
+        # Guard against empty candidate responses
         if not candidate or not candidate.strip():
             failed_checks.append("Generation Audit: Candidate response is empty.")
             audit_logs.append(f"Iteration {state['iteration_count']} - Generation Audit: Failed: Response is empty.")
-            return {"failed_checks": failed_checks, "audit_logs": audit_logs}
-        
-        # 1. Brand Audit
-        brand_res = self.model.invoke([
-            SystemMessage(content=self.loader.brand_audit_prompt),
-            HumanMessage(content=candidate)
-        ]).content.strip()
-        
-        if "PASS" not in brand_res:
-            failed_checks.append(f"Brand Audit: {brand_res}")
-            audit_logs.append(f"Iteration {state['iteration_count']} - Brand Audit: Failed: {brand_res}")
-        else:
-            audit_logs.append(f"Iteration {state['iteration_count']} - Brand Audit: Passed")
+            return {
+                "failed_checks": failed_checks,
+                "audit_logs": audit_logs,
+                "audit_results": []
+            }
             
-        # 2. Fact Audit
-        fact_res = self.model.invoke([
-            SystemMessage(content=self.loader.fact_audit_prompt),
-            HumanMessage(content=candidate)
-        ]).content.strip()
+        # Run all 4 audits using the structured helper
+        brand_result = self._run_single_audit("brand", self.loader.brand_audit_prompt, candidate)
+        fact_result = self._run_single_audit("fact", self.loader.fact_audit_prompt, candidate)
         
-        if "PASS" not in fact_res:
-            failed_checks.append(f"Fact Audit: {fact_res}")
-            audit_logs.append(f"Iteration {state['iteration_count']} - Fact Audit: Failed: {fact_res}")
-        else:
-            audit_logs.append(f"Iteration {state['iteration_count']} - Fact Audit: Passed")
-
-        # 3. Emotional Audit
-        emotion_audit_instruction = self.loader.emotional_audit_prompt_template.format(
-            vibe=state['emotion_signals'].get('vibe', 'calm')
+        emotion_payload = (
+            f"User Vibe: {state['emotion_signals'].get('vibe', 'calm')}\n"
+            f"User Intent: {state['emotion_signals'].get('intent', 'browsing')}\n\n"
+            f"Candidate Response:\n{candidate}"
         )
-        emotion_res = self.model.invoke([
-            SystemMessage(content=emotion_audit_instruction),
-            HumanMessage(content=candidate)
-        ]).content.strip()
+        emotional_result = self._run_single_audit("emotional", self.loader.emotional_audit_prompt_template, emotion_payload)
         
-        if "PASS" not in emotion_res:
-            failed_checks.append(f"Emotional Audit: {emotion_res}")
-            audit_logs.append(f"Iteration {state['iteration_count']} - Emotional Audit: Failed: {emotion_res}")
-        else:
-            audit_logs.append(f"Iteration {state['iteration_count']} - Emotional Audit: Passed")
-
-        # 4. Output Guardrail
-        guardrail_res = self.model.invoke([
-            SystemMessage(content=self.loader.output_guardrail_prompt),
-            HumanMessage(content=candidate)
-        ]).content.strip()
+        security_result = self._run_single_audit("security", self.loader.output_guardrail_prompt, candidate, use_tools=False)
         
-        if "PASS" not in guardrail_res:
-            failed_checks.append(f"Output Guardrail: {guardrail_res}")
-            audit_logs.append(f"Iteration {state['iteration_count']} - Output Guardrail: Failed: {guardrail_res}")
-        else:
-            audit_logs.append(f"Iteration {state['iteration_count']} - Output Guardrail: Passed")
-
-        return {"failed_checks": failed_checks, "audit_logs": audit_logs}
+        # Collect results
+        audit_results = [
+            brand_result.model_dump(),
+            fact_result.model_dump(),
+            emotional_result.model_dump(),
+            security_result.model_dump()
+        ]
+        
+        # Process hard errors
+        for res in [brand_result, fact_result, emotional_result, security_result]:
+            if res.status_code == "hard_error":
+                failed_checks.append(f"{res.type.upper()} AUDIT FAILURE: {res.description} (Rec: {res.recommendation})")
+                audit_logs.append(f"Iteration {state['iteration_count']} - {res.type.upper()} Audit Failed: {res.description}")
+            else:
+                status_label = "Passed" if res.status_code == "pass" else "Warning"
+                audit_logs.append(f"Iteration {state['iteration_count']} - {res.type.upper()} Audit {status_label}")
+                
+        return {
+            "failed_checks": failed_checks,
+            "audit_logs": audit_logs,
+            "audit_results": audit_results
+        }
 
     def _iteration_enhancer(self, state: AgentState) -> Dict:
         """
@@ -363,6 +397,44 @@ class CustomerServiceAgent:
             State updates containing the incremented count.
         """
         return {"iteration_count": state["iteration_count"] + 1}
+
+    def _quick_fixer(self, state: AgentState) -> Dict:
+        """
+        Applies a lightweight style/format correction to the candidate response
+        based on styling audit feedback.
+        
+        Args:
+            state: The current operational state.
+            
+        Returns:
+            State updates containing the corrected 'response' and incremented 'iteration_count'.
+        """
+        candidate = state.get("response", "")
+        failed_checks_str = "\n".join([f"- {err}" for err in state.get("failed_checks", [])])
+        
+        prompt = (
+            f"Candidate Response:\n{candidate}\n\n"
+            f"Failed Checks:\n{failed_checks_str}"
+        )
+        
+        res = self.model.invoke([
+            SystemMessage(content=self.loader.quick_fix_prompt),
+            HumanMessage(content=prompt)
+        ]).content.strip()
+        
+        # Clean any accidental markdown output wrappers
+        if res.startswith("```"):
+            lines = res.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            res = "\n".join(lines).strip()
+            
+        return {
+            "response": res,
+            "iteration_count": state["iteration_count"] + 1
+        }
 
     def _compile_graph(self):
         """
@@ -380,6 +452,7 @@ class CustomerServiceAgent:
         workflow.add_node("generate", self._generate_response)
         workflow.add_node("run_audits", self._run_audits)
         workflow.add_node("iteration_enhancer", self._iteration_enhancer)
+        workflow.add_node("quick_fixer", self._quick_fixer)
         
         workflow.set_entry_point("classifier")
         
@@ -409,18 +482,30 @@ class CustomerServiceAgent:
                 return "end"
             if state.get("iteration_count", 0) >= 3:
                 return "end"
-            return "iterate"
+                
+            audit_results = state.get("audit_results", [])
+            has_full_iteration = False
+            for res in audit_results:
+                if res.get("status_code") == "hard_error" and res.get("action_type") == "full_iteration":
+                    has_full_iteration = True
+                    break
+                    
+            if has_full_iteration:
+                return "full_iteration"
+            return "quick_fix"
             
         workflow.add_conditional_edges(
             "run_audits",
             should_continue,
             {
-                "iterate": "iteration_enhancer",
+                "full_iteration": "iteration_enhancer",
+                "quick_fix": "quick_fixer",
                 "end": END
             }
         )
         
         workflow.add_edge("iteration_enhancer", "generate")
+        workflow.add_edge("quick_fixer", "run_audits")
         
         return workflow.compile(checkpointer=self.memory)
 
@@ -447,6 +532,7 @@ class CustomerServiceAgent:
             "emotion_signals": {},
             "enhanced_prompt": "",
             "response": "",
+            "audit_results": [],
             "audit_logs": [],
             "failed_checks": [],
             "iteration_count": 0

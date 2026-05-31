@@ -26,6 +26,7 @@ class DocumentAndPromptLoader:
         self.fact_audit_prompt = ""
         self.emotional_audit_prompt_template = ""
         self.output_guardrail_prompt = ""
+        self.quick_fix_prompt = ""
         self.static_prompt_content = ""
         
         self.load_and_parse_documents()
@@ -124,6 +125,7 @@ class DocumentAndPromptLoader:
         self.fact_audit_prompt = self.load_prompt_file("fact_audit.md")
         self.emotional_audit_prompt_template = self.load_prompt_file("emotional_audit.md")
         self.output_guardrail_prompt = self.load_prompt_file("output_guardrail.md")
+        self.quick_fix_prompt = self.load_prompt_file("quick_fix.md")
 
     def setup_static_prompt(self):
         """
