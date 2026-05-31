@@ -13,53 +13,53 @@ This document defines the production-grade multi-stage LangGraph workflow used b
                              │
                              ▼
                   ┌──────────────────────┐
-                  │  1. Input Guardrail  │
+                  │    1. Classifier     │
                   └──────────┬───────────┘
                              │
-              ┌──────────────┴──────────────┐
-              ▼ (Safe/Related)              ▼ (Unsafe/Unrelated)
-     ┌──────────────────────┐      ┌──────────────────────┐
-     │  2. Analyze Emotion  │      │   Refusal Response   │
-     │       & Intent       │      │   (Direct Exit)      │
-     └──────────┬───────────┘      └──────────┬───────────┘
-                │                             │
-                ▼                             │
-     ┌──────────────────────┐                 │
-     │  3. Enhance Prompt   │                 │
-     └──────────┬───────────┘                 │
-                │                             │
-                ▼                             │
-     ┌──────────────────────┐◀────────────┐   │
-     │ 4. Generate Response │             │   │
-     │  (Uses Dynamic Doc   │             │   │
-     │    Retrieval Tool)   │             │   │
-     └──────────┬───────────┘             │   │
-                │                         │   │
-                ▼                         │   │
-     ┌──────────────────────┐             │   │
-     │    5. Run Audits     │             │   │
-     │  (Brand, Facts, Tone,│             │   │
-     │   Security Guardrail)│             │   │
-     └──────────┬───────────┘             │   │
-                │                         │   │
-                ▼                         │   │
-     ┌──────────────────────┐             │   │
-     │ Any check failed? &  │             │   │
-     │   Attempts < 3?      │             │   │
-     └──────┬────────────┬──┘             │   │
-            │ (Yes)      │ (No)           │   │
-            ▼            └────────────┐   │   │
-     ┌──────────────┐                 │   │   │
-     │ 6. Iteration │                 │   │   │
-     │   Enhancer   │                 │   │   │
-     └──────┬───────┘                 │   │   │
-            │                         │   │   │
-            └─────────────────────────┼───┘   │
-                                      ▼       ▼
-                               ┌─────────────┐
-                               │   Send to   │
-                               │   User      │
-                               └─────────────┘
+               ┌─────────────┴─────────────┐
+               ▼ (Complex/Uncategorized)   ▼ (Simple Categories)
+      ┌──────────────────────┐    ┌──────────────────────┐
+      │  2. Analyze Emotion  │    │  Direct Brand-Voice  │
+      │       & Intent       │    │  Response Templates  │
+      └──────────┬───────────┘    └──────────┬───────────┘
+                 │                           │
+                 ▼                           │
+      ┌──────────────────────┐               │
+      │  3. Enhance Prompt   │               │
+      └──────────┬───────────┘               │
+                 │                           │
+                 ▼                           │
+      ┌──────────────────────┐◀──────────┐   │
+      │ 4. Generate Response │           │   │
+      │   (Uses Gemini       │           │   │
+      │    Context Cache)    │           │   │
+      └──────────┬───────────┘           │   │
+                 │                       │   │
+                 ▼                       │   │
+      ┌──────────────────────┐           │   │
+      │    5. Run Audits     │           │   │
+      │  (Brand, Facts, Tone,│           │   │
+      │   Security Guardrail)│           │   │
+      └──────────┬───────────┘           │   │
+                 │                       │   │
+                 ▼                       │   │
+      ┌──────────────────────┐           │   │
+      │ Any check failed? &  │           │   │
+      │   Attempts < 3?      │           │   │
+      └──────┬────────────┬──┘           │   │
+             │ (Yes)      │ (No)         │   │
+             ▼            └──────────┐   │   │
+      ┌──────────────┐               │   │   │
+      │ 6. Iteration │               │   │   │
+      │   Enhancer   │               │   │   │
+      └──────┬───────┘               │   │   │
+             │                       │   │   │
+             └───────────────────────┼───┘   │
+                                     ▼       ▼
+                              ┌─────────────┐
+                              │   Send to   │
+                              │    User     │
+                              └─────────────┘
 ```
 
 ---
@@ -70,9 +70,10 @@ The graph state is a dictionary that tracks inputs, outputs, and intermediate ev
 
 * **`messages`**: Accumulated conversation history (with `add_messages` reducer to automatically merge tool outputs).
 * **`user_prompt`**: The latest message string sent by the user.
-* **`is_safe`**: Boolean status indicating whether the query passed the Input Guardrail.
+* **`category`**: The classified category key determined by the routing node.
+* **`is_safe`**: Boolean status indicating whether the query is safe/related (inferred from classifier routing).
 * **`emotion_signals`**: Structured details about the customer's sentiment (`vibe`, `intent`, and `reason`).
-* **`enhanced_prompt`**: Enriched prompt injection payload including core instructions, permanent context, dynamic tools, and emotional indicators.
+* **`enhanced_prompt`**: Enriched prompt injection payload used for fallback (non-cached) execution.
 * **`response`**: Candidate text generated by the LLM responder.
 * **`audit_logs`**: Log history of all audit evaluations.
 * **`failed_checks`**: List of current rule violations to be corrected.
@@ -82,19 +83,25 @@ The graph state is a dictionary that tracks inputs, outputs, and intermediate ev
 
 ## 3. Node Workflows
 
-### 1. Input Guardrail (`input_guardrail`)
-An LLM-based classifier that checks if the customer's query is related to Nuit Fragrances (perfumes, home mists, orders, policies) and safe.
-* **If UNSAFE**: Immediately overrides the response with the standard customer care phone intake block, short-circuiting the graph.
-* **If SAFE**: Normal flow continues.
+### 1. Pre-Classification Router (`classifier`)
+An LLM-based classifier that maps user inputs to exactly one routing category key:
+* `unrelated_or_harmful`: Triggers direct refusal reply.
+* `greeting_or_chitchat`: Triggers standard welcoming message.
+* `order_tracking`: Triggers request for checkout phone or order ID.
+* `faq_shipping_egypt`: Returns flat-fee domestic delivery timeline directly.
+* `faq_shipping_intl`: Returns flat-fee international delivery parameters directly.
+* `faq_returns_refunds`: Returns refund window/eligibility details directly.
+* `faq_discovery_box`: Returns miniature trial package pricing details directly.
+* `complex_uncategorized`: Forwards execution to the deep main agentic pipeline.
 
 ### 2. Emotion & Intent Analyzer (`analyze_emotion`)
 Evaluates the user prompt and recent conversation history to identify frustration levels (anger, anxiety) and purchasing signals (information-seeking, purchase-ready). Saves these indicators as metadata signals.
 
 ### 3. Prompt Enhancer (`enhance_prompt`)
-Combines Nuit's core persona system prompt, permanent context (brand guidelines and SOPs), dynamic tool instructions, and the user's emotional state into a comprehensive instructions payload for the generator.
+Combines Nuit's core persona system prompt, permanent context (brand guidelines and SOPs), dynamic tool instructions, and the user's emotional state into a comprehensive instructions payload for the generator. Used primarily as a fallback path if context caching is disabled/failed.
 
 ### 4. Tool-Calling Generator (`generate`)
-Uses a tool-calling execution loop to generate the candidate response. The model has access to the **`retrieve_document_content`** tool and can dynamically fetch the contents of registered files as needed before responding.
+Uses a tool-calling execution loop to generate the candidate response. The model uses Gemini's **Context Caching** (`cached_content`) to load static instructions and SOPs, reducing token usage. It has access to the **`retrieve_document_content`** tool to retrieve knowledge files as needed.
 
 ### 5. Audits & Output Guardrail (`run_audits`)
 Runs four sequential checks on the generated candidate response:

@@ -1,8 +1,7 @@
 flask
 python-dotenv
-google-generativeai
 requests
-langchain-google-genai
+langchain-openai
 langgraph
 langchain-core
 langsmith
