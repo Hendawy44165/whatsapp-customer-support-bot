@@ -1,0 +1,9 @@
+flask
+python-dotenv
+google-generativeai
+requests
+langchain-google-genai
+langgraph
+langchain-core
+langsmith
+langchain
