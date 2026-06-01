@@ -138,5 +138,19 @@ class DocumentAndPromptLoader:
             f"=== PERMANENT CONTEXT ===\n{self.permanent_context}\n\n"
             f"=== KNOWLEDGE DOCUMENTS AVAILABLE VIA TOOL ===\n"
             f"You have access to a tool `retrieve_document_content` which can fetch details for:\n"
-            f"{doc_list_str}"
+            f"{doc_list_str}\n\n"
+            f"=== ORDER TRACKING DATABASE TOOL ===\n"
+            f"You have access to a tool `look_up_order` which can fetch live tracking and shipment details for an order ID or phone number."
         )
+
+
+    def reload_documents(self):
+        """
+        Reloads all documents dynamically from docs_dir.
+        """
+        self.doc_registry = {}
+        self.doc_descriptions = []
+        self.permanent_context = ""
+        self.load_and_parse_documents()
+        self.setup_static_prompt()
+

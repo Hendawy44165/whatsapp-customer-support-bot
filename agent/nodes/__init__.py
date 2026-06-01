@@ -7,6 +7,8 @@ from agent.nodes.generator import GeneratorNode
 from agent.nodes.auditor import AuditorNode
 from agent.nodes.quick_fixer import QuickFixerNode
 from agent.nodes.iteration_enhancer import IterationEnhancerNode
+from agent.nodes.handoff import HumanHandoffNode
+from agent.nodes.save_history import SaveHistoryNode
 
 __all__ = [
     "BaseNode",
@@ -17,5 +19,8 @@ __all__ = [
     "GeneratorNode",
     "AuditorNode",
     "QuickFixerNode",
-    "IterationEnhancerNode"
+    "IterationEnhancerNode",
+    "HumanHandoffNode",
+    "SaveHistoryNode",
 ]
+

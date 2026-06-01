@@ -10,7 +10,7 @@ class GeneratorNode(BaseNode):
     def __call__(self, state: AgentState) -> Dict:
         user_prompt = state["user_prompt"]
         
-        model_with_tools = self.agent.model.bind_tools([self.agent.retrieve_tool])
+        model_with_tools = self.agent.model.bind_tools(self.agent.tools)
         
         signals = state.get("emotion_signals", {})
         emotion = signals.get("vibe", "calm")
@@ -41,15 +41,12 @@ class GeneratorNode(BaseNode):
         messages.extend(state.get("messages", [])[-5:])
         messages.append(HumanMessage(content=user_prompt))
         
-        new_messages = [HumanMessage(content=user_prompt)]
-        
         # Initialize default response
         response = None
         for _ in range(5):
             response = model_with_tools.invoke(messages)
-                
+                 
             messages.append(response)
-            new_messages.append(response)
             
             if not response.tool_calls:
                 content = response.content
@@ -62,21 +59,19 @@ class GeneratorNode(BaseNode):
                             texts.append(block)
                     content = "".join(texts)
                 return {
-                    "response": content,
-                    "messages": new_messages
+                    "response": content
                 }
                 
             for tool_call in response.tool_calls:
                 tool_name = tool_call["name"]
                 tool_args = tool_call["args"]
-                if tool_name == "retrieve_document_content":
-                    content = self.agent.retrieve_tool.invoke(tool_args)
+                if tool_name in self.agent.tools_by_name:
+                    content = self.agent.tools_by_name[tool_name].invoke(tool_args)
                 else:
                     content = f"Unknown tool: {tool_name}"
                 
                 tool_msg = ToolMessage(content=content, tool_call_id=tool_call["id"])
                 messages.append(tool_msg)
-                new_messages.append(tool_msg)
                 
         if response is not None:
             content = response.content
@@ -92,6 +87,6 @@ class GeneratorNode(BaseNode):
             content = ""
             
         return {
-            "response": content,
-            "messages": new_messages
+            "response": content
         }
+

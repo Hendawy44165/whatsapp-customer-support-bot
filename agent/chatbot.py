@@ -18,7 +18,10 @@ from agent.nodes import (
     AuditorNode,
     QuickFixerNode,
     IterationEnhancerNode,
+    HumanHandoffNode,
+    SaveHistoryNode,
 )
+
 
 
 class CustomerServiceAgent:
@@ -83,7 +86,61 @@ class CustomerServiceAgent:
                 f"Document '{document_name}' not found. Available documents: {list(self.loader.doc_registry.keys())}",
             )
 
+        # Define the order tracking tool
+        @tool
+        def look_up_order(order_id: str | None = None, phone_number: str | None = None) -> str:
+
+            """Retrieves current order tracking status, items, carrier, tracking ID, and shipping details.
+            Provide either 'order_id' or 'phone_number' (or both) to locate the shipment in the database.
+            Example Order IDs: 'NUIT-1001', 'NUIT-1002', 'NUIT-1003'.
+            Example Phone Numbers: '+201234567890', '+201099887766'.
+            """
+            from agent.mock_db import MOCK_ORDERS_DB
+
+            if not order_id and not phone_number:
+                return "Please provide an Order ID or Phone Number to lookup shipment status."
+
+            if order_id:
+                oid = order_id.strip().upper()
+                if oid in MOCK_ORDERS_DB:
+                    order = MOCK_ORDERS_DB[oid]
+                    return (
+                        f"Order {oid} status is: {order['status'].upper()}.\n"
+                        f"- Customer: {order['customer_name']}\n"
+                        f"- Items: {order['items']}\n"
+                        f"- Carrier: {order['carrier']}\n"
+                        f"- Tracking ID: {order['tracking_number']}\n"
+                        f"- Estimated Delivery/Status: {order['estimated_delivery']}"
+                    )
+
+            if phone_number:
+                ph = phone_number.strip()
+                matches = []
+                for oid, order in MOCK_ORDERS_DB.items():
+                    if order["mobile_number"] == ph:
+                        matches.append(order)
+                if matches:
+                    results = []
+                    for order in matches:
+                        results.append(
+                            f"Order {order['order_id']} status is: {order['status'].upper()}.\n"
+                            f"- Customer: {order['customer_name']}\n"
+                            f"- Items: {order['items']}\n"
+                            f"- Carrier: {order['carrier']}\n"
+                            f"- Tracking ID: {order['tracking_number']}\n"
+                            f"- Estimated Delivery/Status: {order['estimated_delivery']}"
+                        )
+                    return "\n\n".join(results)
+
+            return f"No matching order found in the system database for Order ID: '{order_id}' / Phone Number: '{phone_number}'."
+
         self.retrieve_tool = retrieve_document_content
+        self.lookup_tool = look_up_order
+        self.tools = [retrieve_document_content, look_up_order]
+        self.tools_by_name = {
+            "retrieve_document_content": retrieve_document_content,
+            "look_up_order": look_up_order,
+        }
 
         # Initialize Nodes
         self.classifier_node = ClassifierNode(self)
@@ -94,6 +151,8 @@ class CustomerServiceAgent:
         self.auditor_node = AuditorNode(self)
         self.quick_fixer_node = QuickFixerNode(self)
         self.iteration_enhancer_node = IterationEnhancerNode(self)
+        self.handoff_node = HumanHandoffNode(self)
+        self.save_history_node = SaveHistoryNode(self)
 
         # Compile State Graph
         self.agent = self._compile_graph()
@@ -115,12 +174,15 @@ class CustomerServiceAgent:
         workflow.add_node("run_audits", self.auditor_node)
         workflow.add_node("iteration_enhancer", self.iteration_enhancer_node)
         workflow.add_node("quick_fixer", self.quick_fixer_node)
+        workflow.add_node("handoff", self.handoff_node)
+        workflow.add_node("save_history", self.save_history_node)
+
 
         workflow.set_entry_point("classifier")
 
         def route_classifier(state: AgentState):
             category = state.get("category", "complex_uncategorized")
-            if category == "complex_uncategorized":
+            if category in ["complex_uncategorized", "order_tracking"]:
                 return "analyze_emotion"
             return "direct_response"
 
@@ -140,13 +202,21 @@ class CustomerServiceAgent:
         workflow.add_edge("generate", "run_audits")
 
         def should_continue(state: AgentState):
-            # TODO: fix this logic to not allow hard errors to pass
+            if state.get("is_handoff", False):
+                return "handoff"
+
             if not state.get("failed_checks"):
-                return "end"
+                return "save_history"
+
+            # Route to handoff if iterations exceed limit and checks still fail
             if state.get("iteration_count", 0) >= 3:
-                return "end"
+                return "handoff"
 
             audit_results = state.get("audit_results", [])
+            for res in audit_results:
+                if res.get("action_type") == "human_handoff":
+                    return "handoff"
+
             has_full_iteration = False
             for res in audit_results:
                 if (
@@ -166,28 +236,35 @@ class CustomerServiceAgent:
             {
                 "full_iteration": "iteration_enhancer",
                 "quick_fix": "quick_fixer",
-                "end": END,
+                "handoff": "handoff",
+                "save_history": "save_history",
             },
         )
 
         workflow.add_edge("iteration_enhancer", "generate")
         workflow.add_edge("quick_fixer", "run_audits")
+        workflow.add_edge("handoff", END)
+        workflow.add_edge("save_history", END)
+
 
         return workflow.compile(checkpointer=self.memory)
 
     @traceable
-    def send_message(self, message: str) -> str:
+    def send_message(self, message: str, thread_id: str = "default-thread") -> str:
         """
         Dispatches a message thread to the compiled LangGraph pipeline.
 
         Args:
             message: User query text input.
+            thread_id: Thread/session identifier.
 
         Returns:
             The finalized agent reply text.
         """
+        config = {"configurable": {"thread_id": thread_id}}
+        
         # Load messages from current session thread
-        current_state = self.agent.get_state(self.config)
+        current_state = self.agent.get_state(config)
         messages = current_state.values.get("messages", [])
 
         inputs = {
@@ -202,12 +279,14 @@ class CustomerServiceAgent:
             "audit_logs": [],
             "failed_checks": [],
             "iteration_count": 0,
+            "is_handoff": False,
+            "handoff_summary": "",
         }
 
         # Stream Graph updates in real-time
         print("\n>>> STARTING GRAPH EXECUTION STREAM <<<")
         for chunk in self.agent.stream(
-            inputs, config=self.config, stream_mode="updates"
+            inputs, config=config, stream_mode="updates"
         ):
             for node_name, update in chunk.items():
                 print(f"\n[Node: {node_name}] Completed")
@@ -217,13 +296,13 @@ class CustomerServiceAgent:
         print("\n>>> GRAPH EXECUTION COMPLETED <<<\n")
 
         # Get final state from checkpointer
-        final_state = self.agent.get_state(self.config).values
+        final_state = self.agent.get_state(config).values
 
         # Print audit reports (simple print logs)
         print("=== SYSTEM AUDIT REPORT ===")
         category = final_state.get("category", "complex_uncategorized")
         print(f"Routed Category: {category.upper()}")
-        if category != "complex_uncategorized":
+        if category != "complex_uncategorized" and category != "order_tracking":
             print("Action: DIRECT RESPONSE ROUTE (audits bypassed)")
         else:
             signals = final_state.get("emotion_signals", {})
@@ -238,3 +317,11 @@ class CustomerServiceAgent:
         print("===========================\n")
 
         return final_state["response"]
+
+    def get_thread_state(self, thread_id: str) -> Dict:
+        """
+        Retrieves the state dictionary for a specific thread.
+        """
+        config = {"configurable": {"thread_id": thread_id}}
+        return self.agent.get_state(config).values
+

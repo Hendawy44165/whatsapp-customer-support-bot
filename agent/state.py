@@ -69,3 +69,6 @@ class AgentState(TypedDict):
     audit_logs: List[str]
     failed_checks: List[str]
     iteration_count: int
+    is_handoff: bool
+    handoff_summary: str
+

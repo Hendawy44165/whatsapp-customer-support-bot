@@ -21,7 +21,10 @@ class EnhancePromptNode(BaseNode):
             f"=== KNOWLEDGE DOCUMENTS AVAILABLE VIA TOOL ===\n"
             f"You have access to a tool `retrieve_document_content` which can fetch details for:\n"
             f"{doc_list_str}\n\n"
+            f"=== ORDER TRACKING DATABASE TOOL ===\n"
+            f"You have access to a tool `look_up_order` which can fetch live tracking and shipment details for an order ID or phone number.\n\n"
             f"=== EMOTIONAL & INTENT CONTEXT ===\n"
+
             f"- User emotional state: {emotion} (Reason: {reason})\n"
             f"- User buying intent level: {intent}\n"
             f"Instruction: Adapt your tone and response format to match the customer's emotional state. "
