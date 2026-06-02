@@ -1,15 +1,14 @@
 #!/bin/bash
-# delete.sh - Stop and remove containers, volumes, networks, and image of the database
+# delete.sh - Teardown and delete the local database containers, networks, and persistent data volumes
 
 # Get directory where script is located
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$DIR"
+cd "$DIR/supabase"
 
-echo "[delete.sh] Stopping and removing containers and volumes..."
+echo "[delete.sh] Tearing down the local Supabase container stack..."
 docker compose down -v
 
-# Remove the postgres image if requested (optional)
-echo "[delete.sh] Deleting database Docker image..."
-docker rmi supabase/postgres:15.1.1.78 || true
+echo "[delete.sh] Cleaning up environment config files..."
+rm -f .env .env.old
 
-echo "[delete.sh] Cleanup complete."
+echo "[delete.sh] Cleanup complete. Persistent volumes and networks removed."

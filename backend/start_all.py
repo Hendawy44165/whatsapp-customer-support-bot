@@ -7,7 +7,7 @@ import signal
 # List of sub-servers to start
 # Each tuple has: (Name, Filepath, Port)
 SERVERS = [
-    ("Dashboard Server", "dashboard_server/app.py", 8001),
+    ("Dashboard Server", "dashboard_server/app.py", 8000),
     ("Agent Server", "agent_server/app.py", 8010),
     ("HubSpot CRM MCP Server", "mcp_servers/hubspot_mcp.py", 8011),
     ("Shop Cart Handling MCP Server", "mcp_servers/shop_cart_mcp.py", 8012),
