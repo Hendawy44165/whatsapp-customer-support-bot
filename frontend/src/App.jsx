@@ -3,17 +3,16 @@ import {
   BarChart3, 
   MessageSquare, 
   FileText, 
-  Terminal, 
-  Moon, 
-  Sparkles,
+  Settings as SettingsIcon, 
   RefreshCw,
-  Coins
+  Coins,
+  Sparkles
 } from 'lucide-react';
 import { mockConversations, getAnalyticsSummary } from './mockData';
 import Dashboard from './components/Dashboard';
 import Inspector from './components/Inspector';
 import FileManager from './components/FileManager';
-import Playground from './components/Playground';
+import Settings from './components/Settings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -38,13 +37,8 @@ export default function App() {
   const handleRefresh = async () => {
     setRefreshing(true);
     await checkConnection();
-    await new Promise(r => setTimeout(r, 600)); // nice visual spin duration
+    await new Promise(r => setTimeout(r, 600)); // visual spin duration
     setRefreshing(false);
-  };
-
-  // Add conversation from playground tests to the active list
-  const handleAddNewSession = (newSession) => {
-    setConversations(prev => [newSession, ...prev]);
   };
 
   const getSummary = getAnalyticsSummary(conversations);
@@ -52,8 +46,8 @@ export default function App() {
   const menuItems = [
     { id: 'dashboard', name: 'Overview Dashboard', icon: BarChart3 },
     { id: 'inspector', name: 'Client Conversations', icon: MessageSquare },
-    { id: 'files', name: 'Knowledge Ingestion', icon: FileText },
-    { id: 'playground', name: 'AI Concierge Playground', icon: Terminal }
+    { id: 'files', name: 'Help Library & Docs', icon: FileText },
+    { id: 'settings', name: 'System Settings', icon: SettingsIcon }
   ];
 
   return (
@@ -85,25 +79,28 @@ export default function App() {
         <div className="sidebar-footer">
           <div className={`server-status ${isBackendConnected ? '' : 'offline-status'}`}>
             <span className={`status-indicator ${isBackendConnected ? '' : 'offline'}`}></span>
-            <span>{isBackendConnected ? 'Backend Server Online' : 'Simulated Mock Mode'}</span>
+            <span>{isBackendConnected ? 'Sync Server Online' : 'Sync Simulated'}</span>
           </div>
           
           <button 
             onClick={handleRefresh}
+            title="Scans knowledge directories, re-indexes customer reference sheets, and refreshes chatbot configurations."
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               gap: '8px', 
               padding: '8px', 
-              background: 'rgba(255,255,255,0.03)', 
-              border: '1px solid rgba(255,255,255,0.06)', 
+              background: 'rgba(0, 0, 0, 0.04)', 
+              border: '1px solid var(--border-color)', 
               borderRadius: '6px', 
-              color: '#9fa0bd', 
+              color: '#686256', 
               fontSize: '0.75rem', 
               cursor: 'pointer',
               outline: 'none',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              width: '100%',
+              fontWeight: 500
             }}
           >
             <RefreshCw size={12} className={refreshing ? 'spin-loader' : ''} />
@@ -121,19 +118,19 @@ export default function App() {
             <h1>
               {activeTab === 'dashboard' && 'Nuit Fragrances Concierge Dashboard'}
               {activeTab === 'inspector' && 'Customer Session Auditor'}
-              {activeTab === 'files' && 'RAG Ingestion Center'}
-              {activeTab === 'playground' && 'AI Support Concierge Sandbox'}
+              {activeTab === 'files' && 'Help Library & Docs'}
+              {activeTab === 'settings' && 'System Configuration & Settings'}
             </h1>
             <p>
               {activeTab === 'dashboard' && 'Monitor token rates, customer emotion classifications, and automated resolutions.'}
-              {activeTab === 'inspector' && 'Inspect conversation transcripts, agent sentiment classification, and LangGraph audit trails.'}
-              {activeTab === 'files' && 'Manage static instructions and upload dynamic documents to the chatbot knowledge base.'}
-              {activeTab === 'playground' && 'Chat with the bot concierge directly and trace the execution path of the LangGraph.'}
+              {activeTab === 'inspector' && 'Inspect conversation transcripts, social platform origin, and LangGraph audit trails.'}
+              {activeTab === 'files' && 'Manage static instructions and upload custom guidelines to the chatbot reference registry.'}
+              {activeTab === 'settings' && 'Configure active models, temperature parameters, API credentials, and default instructions.'}
             </p>
           </div>
 
           <div className="header-actions">
-            <span className="header-badge" style={{ color: 'var(--accent-cyan)' }}>
+            <span className="header-badge" style={{ color: 'var(--accent-orange)' }}>
               <Coins />
               <span>Avg Cost: ${getSummary.avgCost.toFixed(5)}</span>
             </span>
@@ -149,7 +146,7 @@ export default function App() {
           {activeTab === 'dashboard' && <Dashboard conversations={conversations} />}
           {activeTab === 'inspector' && <Inspector conversations={conversations} />}
           {activeTab === 'files' && <FileManager />}
-          {activeTab === 'playground' && <Playground onNewSession={handleAddNewSession} />}
+          {activeTab === 'settings' && <Settings />}
         </div>
 
       </main>

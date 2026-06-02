@@ -1,14 +1,11 @@
 import React from 'react';
 import { 
   Users, 
-  TrendingUp, 
-  HelpCircle, 
   UserCheck, 
   Coins, 
   Smile, 
   Activity, 
-  TrendingDown,
-  ArrowUpRight
+  TrendingDown
 } from 'lucide-react';
 import { getAnalyticsSummary, getEmotionDistribution } from '../mockData';
 
@@ -47,21 +44,21 @@ export default function Dashboard({ conversations }) {
       trend: "Combined prompt/completion",
       trendType: "neutral",
       icon: Coins,
-      color: "var(--accent-cyan)"
+      color: "var(--accent-orange)"
     }
   ];
 
   const tokenMetrics = [
-    { label: "Avg Input Tokens / Client", value: summary.avgInputTokens.toLocaleString(), color: "var(--accent-purple)" },
-    { label: "Avg Output Tokens / Client", value: summary.avgOutputTokens.toLocaleString(), color: "var(--accent-cyan)" },
-    { label: "Purchase Closures (Sales)", value: summary.conversionRate + "% conversion", color: "var(--accent-amber)" }
+    { label: "Avg Input Tokens / Client", value: summary.avgInputTokens.toLocaleString(), color: "var(--accent-purple)", unit: "tokens/client" },
+    { label: "Avg Output Tokens / Client", value: summary.avgOutputTokens.toLocaleString(), color: "var(--accent-cyan)", unit: "tokens/client" },
+    { label: "Purchase Closures (Sales)", value: `${summary.conversionRate}%`, color: "var(--accent-amber)", unit: "conversion rate" }
   ];
 
   // Colors mapping for emotions
   const emotionColors = {
     satisfied: "var(--accent-emerald)",
     calm: "var(--accent-blue)",
-    neutral: "#9fa0bd",
+    neutral: "#686256",
     anxious: "var(--accent-amber)",
     frustrated: "var(--accent-red)",
     angry: "#ff003c"
@@ -97,12 +94,12 @@ export default function Dashboard({ conversations }) {
           <div className="chart-header">
             <div>
               <h2 className="chart-title">
-                <Activity size={18} style={{ color: "var(--accent-cyan)" }} />
+                <Activity size={18} style={{ color: "var(--accent-orange)" }} />
                 Conversational Trends
               </h2>
               <p className="chart-subtitle">Daily distribution of customer sessions and human escalations</p>
             </div>
-            <span className="header-badge" style={{ color: "var(--accent-cyan)" }}>
+            <span className="header-badge" style={{ color: "var(--accent-orange)" }}>
               Live Stats
             </span>
           </div>
@@ -121,7 +118,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '50%' }}>
                   <div className="bar-tooltip">Clients: 4</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '12%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '12%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 1</div>
                 </div>
                 <span className="chart-bar-label">Mon</span>
@@ -131,7 +128,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '75%' }}>
                   <div className="bar-tooltip">Clients: 6</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '25%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '25%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 2</div>
                 </div>
                 <span className="chart-bar-label">Tue</span>
@@ -141,7 +138,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '37%' }}>
                   <div className="bar-tooltip">Clients: 3</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '0%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '0%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 0</div>
                 </div>
                 <span className="chart-bar-label">Wed</span>
@@ -151,7 +148,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '62%' }}>
                   <div className="bar-tooltip">Clients: 5</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '12%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '12%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 1</div>
                 </div>
                 <span className="chart-bar-label">Thu</span>
@@ -161,7 +158,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '87%' }}>
                   <div className="bar-tooltip">Clients: 7</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '25%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '25%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 2</div>
                 </div>
                 <span className="chart-bar-label">Fri</span>
@@ -171,7 +168,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '100%' }}>
                   <div className="bar-tooltip">Clients: 8</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '12%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '12%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 1</div>
                 </div>
                 <span className="chart-bar-label">Sat</span>
@@ -181,7 +178,7 @@ export default function Dashboard({ conversations }) {
                 <div className="chart-bar-pillar secondary" style={{ height: '87%' }}>
                   <div className="bar-tooltip">Clients: 7</div>
                 </div>
-                <div className="chart-bar-pillar" style={{ height: '37%', marginLeft: '4px' }}>
+                <div className="chart-bar-pillar" style={{ height: '37%' }}>
                   <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 3</div>
                 </div>
                 <span className="chart-bar-label">Sun</span>
@@ -192,12 +189,12 @@ export default function Dashboard({ conversations }) {
           {/* Legend */}
           <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '20px', fontSize: '0.8rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(to top, rgba(174, 71, 255, 0.2), rgba(174, 71, 255, 0.6))', border: '1px solid rgba(174, 71, 255, 0.7)' }}></div>
-              <span style={{ color: '#8c8ea9' }}>Total Clients Contacted</span>
+              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#EADFC9', border: '1px solid #D5CEBF' }}></div>
+              <span style={{ color: '#686256' }}>Total Clients Contacted</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(to top, var(--accent-purple), var(--accent-cyan))' }}></div>
-              <span style={{ color: '#8c8ea9' }}>Human Handoff Escalations</span>
+              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(to top, var(--accent-orange), var(--accent-amber))' }}></div>
+              <span style={{ color: '#686256' }}>Human Handoff Escalations</span>
             </div>
           </div>
         </div>
@@ -217,11 +214,11 @@ export default function Dashboard({ conversations }) {
           <div className="emotion-list-container">
             {Object.entries(emotionCounts).map(([emotion, count]) => {
               const pct = totalEmotions > 0 ? Math.round((count / totalEmotions) * 100) : 0;
-              const color = emotionColors[emotion] || "#9fa0bd";
+              const color = emotionColors[emotion] || "#686256";
               return (
                 <div className="emotion-row" key={emotion}>
                   <div className="emotion-meta">
-                    <span className="emotion-dot" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}` }}></span>
+                    <span className="emotion-dot" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}></span>
                     <span style={{ textTransform: 'capitalize' }}>{emotion}</span>
                   </div>
                   <div className="emotion-progress-bg">
@@ -237,16 +234,16 @@ export default function Dashboard({ conversations }) {
 
       {/* Average Token Details Section */}
       <div className="glass-panel">
-        <h3 className="metadata-section-title" style={{ color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+        <h3 className="metadata-section-title" style={{ color: 'var(--accent-orange)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
           <Coins size={16} /> Token Usage & Cost Per Client (Average)
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           {tokenMetrics.map((tm, idx) => (
-            <div key={idx} style={{ padding: '16px', background: 'rgba(0, 0, 0, 0.15)', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.04)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontSize: '0.8rem', color: '#8c8ea9', fontWeight: 600 }}>{tm.label}</span>
+            <div key={idx} style={{ padding: '16px', background: '#FDFBF7', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#686256', fontWeight: 600 }}>{tm.label}</span>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                 <span style={{ fontSize: '1.6rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: tm.color }}>{tm.value}</span>
-                <span style={{ fontSize: '0.75rem', color: '#707293' }}>tokens/client</span>
+                <span style={{ fontSize: '0.75rem', color: '#686256' }}>{tm.unit}</span>
               </div>
             </div>
           ))}

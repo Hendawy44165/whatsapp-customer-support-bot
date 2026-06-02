@@ -8,6 +8,7 @@ class GeneratorNode(BaseNode):
     Executes a dynamic tool-calling React loop to generate a candidate response.
     """
     def __call__(self, state: AgentState) -> Dict:
+        # TODO: split to response creator, w/o markdown, and the main agent that does the actions
         user_prompt = state["user_prompt"]
         
         model_with_tools = self.agent.model.bind_tools(self.agent.tools)

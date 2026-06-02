@@ -7,13 +7,75 @@ import {
   Coins, 
   ShieldAlert, 
   Heart, 
-  Compass, 
   MessageSquare,
-  Sparkles,
-  ChevronRight,
   AlertTriangle,
-  HelpCircle
+  Send,
+  MessageCircle
 } from 'lucide-react';
+
+// Custom lightweight Markdown renderer to parse lists and **bold** text in the client portal
+function MarkdownText({ text }) {
+  if (!text) return null;
+  
+  const lines = text.split('\n');
+  
+  return (
+    <div className="markdown-content">
+      {lines.map((line, idx) => {
+        // Detect bullet lists e.g. "1. **Customer Intent**:" or "- Item"
+        const listMatch = line.match(/^(\d+\.\s+|\*\s+|-+\s+)(.*)/);
+        
+        // Helper to parse **bold** blocks
+        const renderLineContent = (content) => {
+          const parts = content.split('**');
+          return parts.map((part, i) => {
+            if (i % 2 === 1) {
+              return <strong key={i}>{part}</strong>;
+            }
+            return part;
+          });
+        };
+
+        if (listMatch) {
+          const listPrefix = listMatch[1];
+          const listText = listMatch[2];
+          const isDecimal = /^\d/.test(listPrefix);
+          
+          return (
+            <li 
+              key={idx} 
+              style={{ 
+                listStyleType: isDecimal ? 'decimal' : 'disc', 
+                marginLeft: '18px', 
+                marginBottom: '6px',
+                fontSize: '0.85rem',
+                lineHeight: '1.45',
+                color: '#2C2B29'
+              }}
+            >
+              {renderLineContent(listText)}
+            </li>
+          );
+        }
+
+        return (
+          <p 
+            key={idx} 
+            style={{ 
+              marginBottom: '8px', 
+              minHeight: line.trim() === "" ? '6px' : 'auto',
+              fontSize: '0.85rem',
+              lineHeight: '1.45',
+              color: '#2C2B29'
+            }}
+          >
+            {renderLineContent(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Inspector({ conversations }) {
   const [selectedId, setSelectedId] = useState(conversations[0]?.id || "");
@@ -29,9 +91,21 @@ export default function Inspector({ conversations }) {
       c.phoneNumber.includes(term) ||
       c.intent.toLowerCase().includes(term) ||
       c.emotion.toLowerCase().includes(term) ||
-      c.status.toLowerCase().includes(term)
+      c.status.toLowerCase().includes(term) ||
+      c.channel.toLowerCase().includes(term)
     );
   });
+
+  // Color mapping/labels for platform channels
+  const getChannelLabel = (channel) => {
+    switch (channel) {
+      case 'whatsapp': return 'WhatsApp';
+      case 'facebook': return 'FB Messenger';
+      case 'telegram': return 'Telegram';
+      case 'webchat': return 'Live Web Chat';
+      default: return channel;
+    }
+  };
 
   return (
     <div className="inspector-layout fade-in">
@@ -41,7 +115,7 @@ export default function Inspector({ conversations }) {
           <Search />
           <input 
             type="text" 
-            placeholder="Search by client, status, vibe..." 
+            placeholder="Search by client, channel, vibe..." 
             className="search-input"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -78,11 +152,11 @@ export default function Inspector({ conversations }) {
                     <span className={`badge ${c.status}`}>
                       {c.status}
                     </span>
+                    <span className={`badge channel-${c.channel}`}>
+                      {getChannelLabel(c.channel)}
+                    </span>
                     <span className={`badge emotion-${c.emotion}`}>
                       {c.emotion}
-                    </span>
-                    <span style={{ fontSize: '0.65rem', color: '#707293' }}>
-                      ${c.cost.toFixed(4)}
                     </span>
                   </div>
                 </div>
@@ -99,20 +173,25 @@ export default function Inspector({ conversations }) {
           <div className="chat-history-pane">
             <div className="chat-header-details">
               <div>
-                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem' }}>
+                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', color: '#191816' }}>
                   {selectedThread.customerName}
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: '#707293', marginTop: '2px', display: 'flex', gap: '10px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#686256', marginTop: '4px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <span>ID: {selectedThread.id}</span>
                   <span>•</span>
                   <span>{new Date(selectedThread.timestamp).toLocaleString()}</span>
-                </p>
+                  <span>•</span>
+                  <span className={`badge channel-${selectedThread.channel}`} style={{ textTransform: 'none' }}>
+                    Origin: {getChannelLabel(selectedThread.channel)}
+                  </span>
+                </div>
               </div>
               <span className={`badge ${selectedThread.status}`}>
                 {selectedThread.status}
               </span>
             </div>
 
+            {/* Plain text bubbles - no markdown parsing in chat history */}
             <div className="chat-messages-scroller">
               {selectedThread.messages.map((m, idx) => (
                 <div key={idx} className={`chat-message-bubble ${m.sender}`}>
@@ -129,7 +208,7 @@ export default function Inspector({ conversations }) {
           </div>
 
           {/* Right Inspector Drawer (Metadata / Auditor Logs) */}
-          <div className="thread-inspector-panel" style={{ padding: '24px 20px', borderLeft: '1px solid var(--border-color)', background: 'rgba(0, 0, 0, 0.05)' }}>
+          <div className="thread-inspector-panel" style={{ padding: '24px 20px', borderLeft: '1px solid var(--border-color)', background: 'rgba(0, 0, 0, 0.01)' }}>
             
             {/* Client Profile */}
             <div style={{ marginBottom: '24px' }}>
@@ -143,14 +222,18 @@ export default function Inspector({ conversations }) {
                 <span>{selectedThread.phoneNumber}</span>
               </div>
               <div className="metadata-row-item">
+                <span>Source Channel</span>
+                <span style={{ fontWeight: 600 }}>{getChannelLabel(selectedThread.channel)}</span>
+              </div>
+              <div className="metadata-row-item">
                 <span>Detected Vibe</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Heart size={12} style={{ color: 'var(--accent-purple)' }} />
+                  <Heart size={12} style={{ color: 'var(--accent-orange)' }} />
                   <span className={`badge emotion-${selectedThread.emotion}`} style={{ fontSize: '0.6rem', padding: '1px 4px' }}>{selectedThread.emotion}</span>
                 </span>
               </div>
               <div className="metadata-row-item">
-                <span>RAG Routing</span>
+                <span>Topic Classification</span>
                 <span>{selectedThread.intent}</span>
               </div>
             </div>
@@ -167,30 +250,30 @@ export default function Inspector({ conversations }) {
                 <span>{selectedThread.tokens.output.toLocaleString()}</span>
               </div>
               <div className="metadata-row-item" style={{ borderBottom: 'none' }}>
-                <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>Calculated Cost</span>
-                <span style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>${selectedThread.cost.toFixed(5)}</span>
+                <span style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>Calculated Cost</span>
+                <span style={{ color: 'var(--accent-orange)', fontWeight: 700 }}>${selectedThread.cost.toFixed(5)}</span>
               </div>
             </div>
 
-            {/* Handoff Summary (Only if escalated) */}
+            {/* Handoff Summary (Only if escalated) - PARSES MARKDOWN */}
             {selectedThread.status === "escalated" && (
-              <div style={{ marginBottom: '24px', border: '1px solid rgba(255, 62, 108, 0.25)', borderRadius: '10px', padding: '14px', background: 'rgba(255, 62, 108, 0.03)' }}>
-                <h4 className="metadata-section-title" style={{ color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ marginBottom: '24px', border: '1px solid rgba(220, 38, 38, 0.25)', borderRadius: '10px', padding: '14px', background: 'rgba(220, 38, 38, 0.02)' }}>
+                <h4 className="metadata-section-title" style={{ color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                   <AlertTriangle size={14} /> Human Handoff Report
                 </h4>
                 <div className="handoff-summary-text">
-                  {selectedThread.handoffSummary}
+                  <MarkdownText text={selectedThread.handoffSummary} />
                 </div>
               </div>
             )}
 
             {/* Auditor Checklogs */}
             <div>
-              <h4 className="metadata-section-title">LangGraph System Audits</h4>
+              <h4 className="metadata-section-title">Auditing Verifications</h4>
               <div className="audit-log-scroller">
                 {selectedThread.failedChecks && selectedThread.failedChecks.length > 0 && (
                   <div className="audit-log-card failed-checks-card">
-                    <div style={{ fontWeight: 'bold', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <div style={{ fontWeight: 'bold', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                       <ShieldAlert size={12} /> FAILED VIOLATION
                     </div>
                     {selectedThread.failedChecks.map((fc, i) => (

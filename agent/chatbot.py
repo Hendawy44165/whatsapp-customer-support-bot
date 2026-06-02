@@ -283,38 +283,9 @@ class CustomerServiceAgent:
             "handoff_summary": "",
         }
 
-        # Stream Graph updates in real-time
-        print("\n>>> STARTING GRAPH EXECUTION STREAM <<<")
-        for chunk in self.agent.stream(
-            inputs, config=config, stream_mode="updates"
-        ):
-            for node_name, update in chunk.items():
-                print(f"\n[Node: {node_name}] Completed")
-                for key, val in update.items():
-                    val_str = str(val)
-                    print(f"  └─ {key}: {val_str}")
-        print("\n>>> GRAPH EXECUTION COMPLETED <<<\n")
+        self.agent.invoke(inputs, config=config)
 
-        # Get final state from checkpointer
         final_state = self.agent.get_state(config).values
-
-        # Print audit reports (simple print logs)
-        print("=== SYSTEM AUDIT REPORT ===")
-        category = final_state.get("category", "complex_uncategorized")
-        print(f"Routed Category: {category.upper()}")
-        if category != "complex_uncategorized" and category != "order_tracking":
-            print("Action: DIRECT RESPONSE ROUTE (audits bypassed)")
-        else:
-            signals = final_state.get("emotion_signals", {})
-            print(f"Detected Emotion: {signals.get('vibe', 'neutral').upper()}")
-            print(f"Detected Intent: {signals.get('intent', 'general').upper()}")
-            print(f"Reasoning: {signals.get('reason', '')}")
-            print("\nAudit Steps:")
-            for log in final_state.get("audit_logs", []):
-                print(f"  {log}")
-            print(f"Total Revision Loops: {final_state.get('iteration_count', 0)}")
-        print(f"\nFinal AI Response:\n{final_state.get('response', '')}")
-        print("===========================\n")
 
         return final_state["response"]
 

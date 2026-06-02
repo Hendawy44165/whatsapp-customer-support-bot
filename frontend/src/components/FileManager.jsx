@@ -4,10 +4,7 @@ import {
   FileText, 
   CheckCircle, 
   AlertCircle, 
-  Trash2, 
-  Sparkles,
   RefreshCw,
-  Clock,
   Info
 } from 'lucide-react';
 
@@ -38,7 +35,6 @@ export default function FileManager() {
           setStaticFiles(data.static_permanent_context);
         }
         if (data.dynamic_rag_documents) {
-          // If returned as dictionary keys, format or handle appropriately
           setDynamicFiles(data.dynamic_rag_documents);
         }
         setIsConnected(true);
@@ -117,7 +113,7 @@ export default function FileManager() {
         if (response.ok) {
           setFeedback({
             type: 'success',
-            message: `Successfully uploaded ${file.name}. AI Knowledge base reloaded.`
+            message: `Successfully uploaded ${file.name}. Chatbot search index updated.`
           });
           if (data.available_documents) {
             setDynamicFiles(data.available_documents);
@@ -140,7 +136,7 @@ export default function FileManager() {
         
         setFeedback({
           type: 'success',
-          message: `Successfully uploaded ${file.name}. (Offline Simulation: RAG Context reloaded)`
+          message: `Successfully uploaded ${file.name}. (Offline Simulation: Search Index reloaded)`
         });
       }
     } catch (error) {
@@ -161,10 +157,10 @@ export default function FileManager() {
       <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div>
           <h2 className="chart-title">
-            <UploadCloud size={18} style={{ color: "var(--accent-purple)" }} />
-            Ingest Knowledge Documents
+            <UploadCloud size={18} style={{ color: "var(--accent-orange)" }} />
+            Upload Help Guides & FAQs
           </h2>
-          <p className="chart-subtitle">Upload training sheets, warranty files, or promo guidelines directly to the bot's RAG system</p>
+          <p className="chart-subtitle">Upload customer policies, FAQs, and product sheets to update the chatbot's knowledge base.</p>
         </div>
 
         {feedback && (
@@ -193,8 +189,8 @@ export default function FileManager() {
           {uploading ? (
             <>
               <RefreshCw className="dropzone-icon spin-loader" style={{ color: 'var(--accent-cyan)' }} />
-              <p className="dropzone-text" style={{ color: 'var(--accent-cyan)' }}>Ingesting and parsing document...</p>
-              <p className="dropzone-subtext">Reloading LangGraph vector indices</p>
+              <p className="dropzone-text" style={{ color: 'var(--accent-cyan)' }}>Uploading and indexing guide...</p>
+              <p className="dropzone-subtext">Updating chatbot search index...</p>
             </>
           ) : (
             <>
@@ -205,10 +201,10 @@ export default function FileManager() {
           )}
         </div>
 
-        <div style={{ padding: '14px', background: 'rgba(255, 255, 255, 0.02)', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '10px', fontSize: '0.8rem', color: '#9fa0bd', display: 'flex', gap: '10px' }}>
+        <div style={{ padding: '14px', background: '#FDFBF7', border: '1px dashed #E6E1D5', borderRadius: '10px', fontSize: '0.8rem', color: '#686256', display: 'flex', gap: '10px' }}>
           <Info size={16} style={{ color: 'var(--accent-cyan)', flexShrink: 0 }} />
           <div>
-            <span style={{ fontWeight: 'bold', color: '#fff' }}>RAG Architecture note:</span> Adding a file automatically triggers the document registry parsing, loading frontmatter configuration tags, and rebuilding the prompt loader dynamic document dictionary.
+            <span style={{ fontWeight: 'bold', color: '#191816' }}>Note on Chatbot Search:</span> Adding files updates the help registry immediately. The chatbot scans these files to answer specific questions.
           </div>
         </div>
       </div>
@@ -219,9 +215,9 @@ export default function FileManager() {
           <div>
             <h2 className="chart-title">
               <FileText size={18} style={{ color: "var(--accent-cyan)" }} />
-              Active Knowledge Base
+              Active Help Library
             </h2>
-            <p className="chart-subtitle">Loaded assets referenced by the agent concierge prompts</p>
+            <p className="chart-subtitle">Loaded reference files available for chatbot replies</p>
           </div>
           <span className={`header-badge ${isConnected ? '' : 'offline'}`} style={{ color: isConnected ? 'var(--accent-emerald)' : 'var(--accent-red)' }}>
             {isConnected ? 'Sync Online' : 'Sync Simulated'}
@@ -229,7 +225,7 @@ export default function FileManager() {
         </div>
 
         <div>
-          <h4 className="metadata-section-title" style={{ fontSize: '0.75rem', marginBottom: '8px' }}>Core Context Documents (Read-Only)</h4>
+          <h4 className="metadata-section-title" style={{ fontSize: '0.75rem', marginBottom: '8px' }}>Standard Guidelines (Preloaded defaults)</h4>
           <div className="file-list" style={{ maxHeight: '140px', marginBottom: '16px' }}>
             {staticFiles.map((file, idx) => (
               <div key={idx} className="file-item" style={{ opacity: 0.85 }}>
@@ -237,19 +233,19 @@ export default function FileManager() {
                   <FileText size={16} style={{ color: 'var(--accent-purple)' }} />
                   <div>
                     <div className="file-item-name">{file}</div>
-                    <span className="file-item-type" style={{ color: 'var(--accent-purple)', fontSize: '0.6rem' }}>Static System Prompt</span>
+                    <span className="file-item-type" style={{ color: 'var(--accent-purple)', fontSize: '0.6rem' }}>Concierge rule set</span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <h4 className="metadata-section-title" style={{ fontSize: '0.75rem', marginBottom: '8px' }}>Dynamic RAG Documents</h4>
+          <h4 className="metadata-section-title" style={{ fontSize: '0.75rem', marginBottom: '8px' }}>Custom Reference Files</h4>
           <div className="file-list" style={{ maxHeight: '240px' }}>
             {dynamicFiles.length === 0 ? (
               <div className="empty-state">
                 <FileText />
-                <p>No dynamic knowledge documents uploaded</p>
+                <p>No custom help files uploaded yet</p>
               </div>
             ) : (
               dynamicFiles.map((file, idx) => (
@@ -258,7 +254,7 @@ export default function FileManager() {
                     <FileText size={16} style={{ color: 'var(--accent-cyan)' }} />
                     <div>
                       <div className="file-item-name">{file}</div>
-                      <span className="file-item-type" style={{ color: 'var(--accent-cyan)', fontSize: '0.6rem' }}>Dynamic Tool Lookup</span>
+                      <span className="file-item-type" style={{ color: 'var(--accent-cyan)', fontSize: '0.6rem' }}>Searchable guide</span>
                     </div>
                   </div>
                 </div>
