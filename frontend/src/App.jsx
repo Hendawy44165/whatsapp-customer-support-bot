@@ -25,18 +25,43 @@ export default function App() {
     try {
       const res = await fetch('/api/documents');
       setIsBackendConnected(res.ok);
+      return res.ok;
     } catch (err) {
       setIsBackendConnected(false);
+      return false;
+    }
+  };
+
+  const fetchConversations = async () => {
+    try {
+      const res = await fetch('/api/conversations');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setConversations(data);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch conversations from server. Using mock data.");
     }
   };
 
   useEffect(() => {
-    checkConnection();
+    const init = async () => {
+      const connected = await checkConnection();
+      if (connected) {
+        await fetchConversations();
+      }
+    };
+    init();
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await checkConnection();
+    const connected = await checkConnection();
+    if (connected) {
+      await fetchConversations();
+    }
     await new Promise(r => setTimeout(r, 600)); // visual spin duration
     setRefreshing(false);
   };

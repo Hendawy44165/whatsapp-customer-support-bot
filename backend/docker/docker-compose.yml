@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  supabase-db:
+    image: supabase/postgres:15.1.1.78
+    container_name: nuit-supabase-db
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: your-super-secret-supabase-password
+      JWT_SECRET: your-super-secret-jwt-token-secret-key-change-in-prod
+    volumes:
+      - nuit_supabase_db_data:/var/lib/postgresql/data
+      # Mount migrations directory to auto-run on startup
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nuit_supabase_db_data:
+    driver: local
