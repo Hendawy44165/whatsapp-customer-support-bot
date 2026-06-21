@@ -1,7 +1,7 @@
 from typing import Dict
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
-from agent.nodes.base import BaseNode
-from agent.state import AgentState, AuditCheckResult
+from .base import BaseNode
+from ..state import AgentState, AuditCheckResult
 
 
 class AuditorNode(BaseNode):

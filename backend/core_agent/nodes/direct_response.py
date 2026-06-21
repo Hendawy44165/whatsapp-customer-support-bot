@@ -1,8 +1,8 @@
 from typing import Dict
 from langchain_core.messages import HumanMessage, AIMessage
-from agent.nodes.base import BaseNode
-from agent.state import AgentState
-from agent.constants import DIRECT_RESPONSES
+from .base import BaseNode
+from ..state import AgentState
+from ..constants import DIRECT_RESPONSES
 
 class DirectResponseNode(BaseNode):
     """

@@ -23,11 +23,25 @@ from .nodes import (
     SaveHistoryNode,
 )
 
-# Import our backend mcp client and db client
-# Since the path redirects are set up by app.py, we can import them from parent folders
+# Import our backend db client
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from backend.agent_server.mcp_client import mcp_client
 from backend.database import db
+
+# Import our direct in-process Python tools
+from .tools import (
+    get_contact_profile,
+    create_support_ticket,
+    list_products,
+    add_to_cart,
+    edit_cart,
+    get_cart,
+    generate_cart_report,
+    get_chat_history,
+    queue_immediate_message,
+    queue_scheduled_followup,
+    request_human_handoff
+)
+
 
 class CustomerServiceAgent:
     """
@@ -37,22 +51,12 @@ class CustomerServiceAgent:
     """
 
     def __init__(
-        self, docs_dir="agent/docs", prompt_path="agent/prompts/system_prompt.md"
+        self, docs_dir=None, prompt_path=None
     ):
         self.docs_dir = docs_dir
         self.prompt_path = prompt_path
 
-        # Load modular prompt files via utility helper
-        # If the folders don't exist in local directory, point to core_agent prompts
-        local_prompt_path = prompt_path
-        if not os.path.exists(local_prompt_path):
-            local_prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "system_prompt.md")
-        
-        local_docs_dir = docs_dir
-        if not os.path.exists(local_docs_dir):
-            local_docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
-
-        self.loader = DocumentAndPromptLoader(local_docs_dir, local_prompt_path)
+        self.loader = DocumentAndPromptLoader(docs_dir, prompt_path)
         self.loader.setup_static_prompt()
 
         # Retrieve LLM config from database settings or environment variables
@@ -70,65 +74,6 @@ class CustomerServiceAgent:
 
         # Initialize Memory Checkpointer
         self.memory = MemorySaver()
-
-        # --- MCP CRM Tools ---
-        @tool
-        def get_contact_profile(email: str) -> str:
-            """Retrieves the HubSpot CRM customer profile by email. Returns contact details, lifecycle stage, and custom notes."""
-            return mcp_client.call_tool("hubspot", "get_contact_profile", {"email": email})
-
-        @tool
-        def create_support_ticket(email: str, subject: str, description: str) -> str:
-            """Creates a new support ticket in HubSpot CRM. Returns the ticket ID and status."""
-            return mcp_client.call_tool("hubspot", "create_support_ticket", {"email": email, "subject": subject, "description": description})
-
-        # --- MCP Shop Cart Tools ---
-        @tool
-        def list_products() -> str:
-            """Lists all available fragrances in the Nuit catalog with prices, codes, and sizes."""
-            return mcp_client.call_tool("shop_cart", "list_products", {})
-
-        @tool
-        def add_to_cart(conversation_id: str, product_code: str, quantity: int = 1) -> str:
-            """Adds a fragrance to the client's shopping cart. Requires product_code (e.g. 'signature')."""
-            return mcp_client.call_tool("shop_cart", "add_to_cart", {"conversation_id": conversation_id, "product_code": product_code, "quantity": quantity})
-
-        @tool
-        def edit_cart(conversation_id: str, product_code: str, quantity: int) -> str:
-            """Modifies the quantity of a product in the cart. Set quantity to 0 to remove the item."""
-            return mcp_client.call_tool("shop_cart", "edit_cart", {"conversation_id": conversation_id, "product_code": product_code, "quantity": quantity})
-
-        @tool
-        def get_cart(conversation_id: str) -> str:
-            """Retrieves the active cart contents and calculates total price for the session."""
-            return mcp_client.call_tool("shop_cart", "get_cart", {"conversation_id": conversation_id})
-
-        @tool
-        def generate_cart_report(conversation_id: str) -> str:
-            """Programmatically generates a clean structured textual cart report (Without using AI generation)."""
-            return mcp_client.call_tool("shop_cart", "generate_cart_report", {"conversation_id": conversation_id})
-
-        # --- MCP Conversations Tools ---
-        @tool
-        def get_chat_history(conversation_id: str) -> str:
-            """Retrieves the chronological text history of messages for context analysis."""
-            return mcp_client.call_tool("conversations", "get_chat_history", {"conversation_id": conversation_id})
-
-        @tool
-        def queue_immediate_message(conversation_id: str, content: str) -> str:
-            """Queues a reply message in the outbound buffer to be sent immediately to the user."""
-            return mcp_client.call_tool("conversations", "queue_immediate_message", {"conversation_id": conversation_id, "content": content})
-
-        @tool
-        def queue_scheduled_followup(conversation_id: str, content: str, delay_seconds: int) -> str:
-            """Schedules an outbound follow-up message to the customer after a specific delay in seconds."""
-            return mcp_client.call_tool("conversations", "queue_scheduled_followup", {"conversation_id": conversation_id, "content": content, "delay_seconds": delay_seconds})
-
-        # --- MCP Human Expert Handoff Tool ---
-        @tool
-        def request_human_handoff(conversation_id: str, handoff_summary: str) -> str:
-            """Triggers the human escalation pipeline, assigning the chat to the least loaded expert and providing a redirection deep-link."""
-            return mcp_client.call_tool("human_expert", "request_human_handoff", {"conversation_id": conversation_id, "handoff_summary": handoff_summary})
 
         # --- Internal Knowledge base doc retrieval tool ---
         @tool

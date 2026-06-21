@@ -594,4 +594,15 @@ class DatabaseClient:
             conn.commit()
             conn.close()
 
+    def delete_cart_item(self, conversation_id: str, product_name: str) -> None:
+        if self.use_supabase:
+            self.supabase_client.table("carts").delete().eq("conversation_id", conversation_id).eq("product_name", product_name).execute()
+        else:
+            conn = sqlite3.connect(self.sqlite_db_path)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM carts WHERE conversation_id = ? AND product_name = ?", (conversation_id, product_name))
+            conn.commit()
+            conn.close()
+
+
 db = DatabaseClient()

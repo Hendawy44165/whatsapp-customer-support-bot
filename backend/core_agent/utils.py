@@ -1,12 +1,14 @@
 import os
 import glob
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
 from langchain_core.messages import SystemMessage
 
 class DocumentAndPromptLoader:
     """
     Utility helper to handle loading, parsing, and context-caching of documents and prompts.
     """
-    def __init__(self, docs_dir="agent/docs", prompt_path="agent/prompts/system_prompt.md"):
+    def __init__(self, docs_dir=None, prompt_path=None):
         """
         Initializes the DocumentAndPromptLoader.
         
@@ -14,8 +16,8 @@ class DocumentAndPromptLoader:
             docs_dir: Directory containing knowledge files.
             prompt_path: Core instructions markdown path.
         """
-        self.docs_dir = docs_dir
-        self.prompt_path = prompt_path
+        self.docs_dir = docs_dir or os.path.join(_HERE, "docs")
+        self.prompt_path = prompt_path or os.path.join(_HERE, "prompts", "system_prompt.md")
         self.doc_registry = {}
         self.doc_descriptions = []
         self.permanent_context = ""
@@ -88,7 +90,7 @@ class DocumentAndPromptLoader:
         Raises:
             FileNotFoundError if target file is missing.
         """
-        path = os.path.join("agent/prompts", filename)
+        path = os.path.join(_HERE, "prompts", filename)
         if not os.path.exists(path):
             raise FileNotFoundError(f"Required prompt file not found: {path}")
         with open(path, 'r', encoding='utf-8') as f:
@@ -106,8 +108,8 @@ class DocumentAndPromptLoader:
         """
         possible_paths = [
             self.prompt_path,
-            "agent/prompts/system_prompt.txt",
-            "agent/prompts/system_prompt.md"
+            os.path.join(_HERE, "prompts", "system_prompt.txt"),
+            os.path.join(_HERE, "prompts", "system_prompt.md"),
         ]
         for path in possible_paths:
             if os.path.exists(path):

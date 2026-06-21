@@ -1,8 +1,8 @@
 from typing import Dict
 from langchain_core.messages import SystemMessage, HumanMessage
-from agent.nodes.base import BaseNode
-from agent.state import AgentState, ClassifierResult
-from agent.constants import VALID_CATEGORIES
+from .base import BaseNode
+from ..state import AgentState, ClassifierResult
+from ..constants import VALID_CATEGORIES
 
 class ClassifierNode(BaseNode):
     """

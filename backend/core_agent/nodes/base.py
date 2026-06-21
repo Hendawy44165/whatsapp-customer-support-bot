@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict
-from agent.state import AgentState
+from ..state import AgentState
 
 class BaseNode(ABC):
     """

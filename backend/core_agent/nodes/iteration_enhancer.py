@@ -1,6 +1,6 @@
 from typing import Dict
-from agent.nodes.base import BaseNode
-from agent.state import AgentState
+from .base import BaseNode
+from ..state import AgentState
 
 class IterationEnhancerNode(BaseNode):
     """
