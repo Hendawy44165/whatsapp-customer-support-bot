@@ -1,4 +1,4 @@
-const scenarios = [
+[
   {
     "id": 1,
     "topic": "Return",
@@ -599,4 +599,4 @@ const scenarios = [
     "persona": "Mustafa (Millennial, Egyptian Tech Bro)",
     "user_input": "Your courier driver hit my mailbox while parking and drove away! This is property damage. I need their insurance information today or I will file a police report."
   }
-];
+]
