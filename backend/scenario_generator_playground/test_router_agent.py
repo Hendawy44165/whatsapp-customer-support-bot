@@ -34,7 +34,7 @@ def validate_output(ai_output: str) -> str:
         return f"FAIL: Invalid JSON parsing. Error: {e}"
         
     # 3. Check keys
-    required_keys = {'message_timestamp', 'topic', 'unrelated_type', 'emotion', 'priority', 'reasoning', 'actual_input'}
+    required_keys = {'topic', 'unrelated_type', 'emotion', 'priority', 'critique', 'user_prompt'}
     missing = required_keys - set(data.keys())
     if missing:
         return f"FAIL: Missing keys {list(missing)}"
@@ -42,8 +42,8 @@ def validate_output(ai_output: str) -> str:
     # 4. Check permitted values
     allowed_topics = {'Return', 'Exchange', 'WISMO', 'General Info', 'Unrelated'}
     allowed_unrelated_types = {'legit', 'off-topic', None}
-    allowed_emotions = {'Very Positive', 'Positive', 'Neutral', 'Negative', 'Very Negative'}
-    allowed_priorities = {'Not-urgent', 'Important but can wait a few minutes', 'Very urgent'}
+    allowed_emotions = {'Positive', 'Neutral', 'Negative'}
+    allowed_priorities = {'Casual', 'Urgent'}
 
     topic = data.get('topic')
     unrelated_type = data.get('unrelated_type')
@@ -115,13 +115,13 @@ def main():
         
         print(f"[{i}/{len(scenarios)}] Processing scenario ID {scenario_id}...")
 
-        ai_reasoning = ""
+        ai_critique = ""
         ai_topic = "error"
         ai_urgency = "error"
         ai_emotion = "error"
 
         if rate_limit_encountered:
-            ai_reasoning = f"Skipped: Prior request failed with rate limit. Original error: {rate_limit_error_msg}"
+            ai_critique = f"Skipped: Prior request failed with rate limit. Original error: {rate_limit_error_msg}"
             print(f"  Skipping API call for scenario ID {scenario_id} due to prior rate limit.")
         else:
             messages = [
@@ -129,41 +129,53 @@ def main():
                 HumanMessage(content=user_prompt)
             ]
 
-            #? Run with rate limit & error handling
-            try:
-                response = llm.invoke(messages)
-                ai_output = response.content
-                validation_status = validate_output(ai_output)
-                
-                if validation_status.startswith("PASS"):
-                    # Extract fields from output
-                    match = re.match(r'^```json\s*\n([\s\S]*?)\n```$', ai_output.strip())
-                    json_str = match.group(1).strip() if match else ai_output.strip()
+            max_retries = 3
+            for attempt in range(1, max_retries + 1):
+                try:
+                    response = llm.invoke(messages)
+                    ai_output = response.content
+                    validation_status = validate_output(ai_output)
                     
-                    data = json.loads(json_str)
-                    ai_reasoning = data.get("reasoning", "")
-                    ai_topic = data.get("topic", "error")
-                    ai_urgency = data.get("priority", "error")
-                    ai_emotion = data.get("emotion", "error")
-                else:
-                    # Invalid JSON structure
-                    ai_reasoning = f"Validation Error: {validation_status}"
-            except Exception as e:
-                error_msg = str(e)
-                ai_reasoning = error_msg
-                print(f"  Error processing scenario ID {scenario_id}: {error_msg}")
-                
-                # Check if it was a rate limit error
-                rate_limit_keywords = ["ratelimit", "rate limit", "429", "resourceexhausted", "quota"]
-                if any(kw in error_msg.lower() for kw in rate_limit_keywords):
-                    rate_limit_encountered = True
-                    rate_limit_error_msg = error_msg
-                    print(f"  Rate limit detected! Skipping all future API calls.")
+                    if validation_status.startswith("PASS"):
+                        # Extract fields from output
+                        match = re.match(r'^```json\s*\n([\s\S]*?)\n```$', ai_output.strip())
+                        json_str = match.group(1).strip() if match else ai_output.strip()
+                        
+                        data = json.loads(json_str)
+                        ai_critique = data.get("critique", "")
+                        ai_topic = data.get("topic", "error")
+                        ai_urgency = data.get("priority", "error")
+                        ai_emotion = data.get("emotion", "error")
+                    else:
+                        # Invalid JSON structure
+                        ai_critique = f"Validation Error: {validation_status}"
+                    break
+                except Exception as e:
+                    error_msg = str(e)
+                    ai_critique = error_msg
+                    
+                    # Check if it was a rate limit error
+                    rate_limit_keywords = ["ratelimit", "rate limit", "429", "resourceexhausted", "quota"]
+                    if any(kw in error_msg.lower() for kw in rate_limit_keywords):
+                        rate_limit_encountered = True
+                        rate_limit_error_msg = error_msg
+                        print(f"  Rate limit detected on ID {scenario_id}! Skipping all future API calls.")
+                        break
+                    
+                    # Check if it was a timeout error
+                    is_timeout = any(kw in error_msg.lower() for kw in ["timeout", "timed out"])
+                    if is_timeout and attempt < max_retries:
+                        print(f"  Timeout encountered on ID {scenario_id} (attempt {attempt}/{max_retries}). Retrying in 1s...")
+                        time.sleep(1.0)
+                        continue
+                    else:
+                        print(f"  Error processing scenario ID {scenario_id}: {error_msg}")
+                        break
 
         results.append({
             "Model Name": model_name or "Unknown Model",
             "User Input": user_prompt,
-            "AI Output Reasoning": ai_reasoning,
+            "Critique": ai_critique,
             "Topic": ai_topic,
             "Urgency": ai_urgency,
             "Emotion": ai_emotion
