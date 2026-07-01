@@ -112,11 +112,11 @@ def main():
 
     print(f"\nStarting QA Agent test suite for {len(scenarios)} scenarios...")
     for index, scenario in enumerate(scenarios, 1):
-        scenario_id = scenario.get("id", index)
-        description = scenario.get("description", "No description")
-        user_message = scenario.get("user_input", "")
-        router_decision = scenario.get("router_decision", "General Info")
-        chat_history_raw = scenario.get("chat_history", [])
+        scenario_id = scenario.get("id")
+        description = scenario.get("description")
+        user_message = scenario.get("user_input")
+        router_decision = scenario.get("router_decision")
+        chat_history_raw = scenario.get("chat_history")
         
         print(f"\n--------------------------------------------------")
         print(f"[{index}/{len(scenarios)}] ID {scenario_id}: {description}")

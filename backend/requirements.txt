@@ -12,3 +12,5 @@ supabase
 mcp
 sse-starlette
 httpx
+pydantic
+pandas
