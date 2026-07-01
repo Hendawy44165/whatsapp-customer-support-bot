@@ -1,158 +1,172 @@
 import os
+import re
 import glob
 
+from langsmith import traceable
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
-from langchain_core.messages import SystemMessage
+
+class ParentChildBM25Retriever:
+    """
+    A lightweight, zero-dependency Parent-Child retriever.
+    Splits markdown documents into Parent sections (headers) and Child chunks (paragraphs).
+    Indexes children using a clean, vectorized-equivalent TF-IDF/BM25 scoring approach.
+    """
+    def __init__(self):
+        self.parents = [] # List of parent text sections
+        self.children = [] # List of (child_text, parent_index) tuples
+        self.vocab = set()
+        self.idf = {}
+        self.child_words_count = []
+        self.child_tf = []
+
+    def add_document(self, text: str):
+        """
+        Parses a markdown document into parent headers and child paragraphs.
+        """
+        # Split by headers: #, ##, ###
+        sections = re.split(r'\n(?=#+ )', text)
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+            
+            parent_idx = len(self.parents)
+            self.parents.append(section)
+            
+            # Split section into child chunks (paragraphs/sentences)
+            paragraphs = section.split('\n\n')
+            for para in paragraphs:
+                para = para.strip()
+                if len(para) > 10:  # Skip trivial short lines
+                    self.children.append((para, parent_idx))
+
+    def fit(self):
+        """
+        Builds the TF-IDF index for the child chunks.
+        """
+        import math
+        self.vocab = set()
+        doc_counts = {}
+        
+        # Preprocess child texts
+        processed_docs = []
+        for child_text, _ in self.children:
+            words = self._tokenize(child_text)
+            processed_docs.append(words)
+            self.vocab.update(words)
+            for w in set(words):
+                doc_counts[w] = doc_counts.get(w, 0) + 1
+        
+        num_docs = len(self.children)
+        self.idf = {}
+        for w in self.vocab:
+            # Standard BM25 IDF
+            self.idf[w] = math.log((num_docs - doc_counts[w] + 0.5) / (doc_counts[w] + 0.5) + 1.0)
+            
+        self.child_tf = []
+        self.child_words_count = []
+        for words in processed_docs:
+            self.child_words_count.append(len(words))
+            tf = {}
+            for w in words:
+                tf[w] = tf.get(w, 0) + 1
+            self.child_tf.append(tf)
+
+    def _tokenize(self, text: str) -> list:
+        # Convert to lowercase and split alphanumeric words
+        return re.findall(r'[a-z0-9]+', text.lower())
+
+    def retrieve(self, query: str, top_k: int = 1) -> str:
+        """
+        Searches child chunks and returns the full parent section of the best match.
+        """
+        if not self.children:
+            return ""
+            
+        query_words = self._tokenize(query)
+        if not query_words:
+            return ""
+            
+        avg_doc_len = sum(self.child_words_count) / len(self.child_words_count) if self.child_words_count else 1
+        k1 = 1.5
+        b = 0.75
+        
+        scores = []
+        for idx in range(len(self.children)):
+            score = 0.0
+            tf = self.child_tf[idx]
+            doc_len = self.child_words_count[idx]
+            
+            for word in query_words:
+                if word in tf:
+                    # BM25 scoring formula
+                    word_tf = tf[word]
+                    num = word_tf * (k1 + 1)
+                    denom = word_tf + k1 * (1 - b + b * (doc_len / avg_doc_len))
+                    score += self.idf.get(word, 0.0) * (num / denom)
+            scores.append(score)
+            
+        if not scores or max(scores) == 0.0:
+            return ""
+            
+        best_idx = scores.index(max(scores))
+        _, parent_idx = self.children[best_idx]
+        return self.parents[parent_idx]
+
 
 class DocumentAndPromptLoader:
     """
-    Utility helper to handle loading, parsing, and context-caching of documents and prompts.
+    Utility loader to load prompt text files and index RAG documents.
     """
-    def __init__(self, docs_dir=None, prompt_path=None):
-        """
-        Initializes the DocumentAndPromptLoader.
-        
-        Args:
-            docs_dir: Directory containing knowledge files.
-            prompt_path: Core instructions markdown path.
-        """
+    def __init__(self, docs_dir=None, prompts_dir=None):
         self.docs_dir = docs_dir or os.path.join(_HERE, "docs")
-        self.prompt_path = prompt_path or os.path.join(_HERE, "prompts", "system_prompt.md")
-        self.doc_registry = {}
-        self.doc_descriptions = []
-        self.permanent_context = ""
+        self.prompts_dir = prompts_dir or os.path.join(_HERE, "prompts")
+        self.retriever = ParentChildBM25Retriever()
+        self.prompts = {}
         
-        self.classifier_prompt = ""
-        self.emotion_analysis_prompt = ""
-        self.brand_audit_prompt = ""
-        self.fact_audit_prompt = ""
-        self.emotional_audit_prompt_template = ""
-        self.output_guardrail_prompt = ""
-        self.quick_fix_prompt = ""
-        self.static_prompt_content = ""
-        
-        self.load_and_parse_documents()
-        self.load_all_prompts()
-        
-    def _parse_doc(self, filepath):
-        """
-        Parses metadata headers and text body from a markdown document.
-        
-        Args:
-            filepath: Path to markdown file.
-            
-        Returns:
-            A tuple of (metadata_dict, body_text).
-        """
-        with open(filepath, 'r', encoding='utf-8') as f:
-            content = f.read()
-        if content.startswith("---"):
-            parts = content.split("---", 2)
-            if len(parts) >= 3:
-                frontmatter_raw = parts[1]
-                body = parts[2].strip()
-                metadata = {}
-                for line in frontmatter_raw.splitlines():
-                    if ":" in line:
-                        k, v = line.split(":", 1)
-                        metadata[k.strip()] = v.strip()
-                return metadata, body
-        return {}, content.strip()
+        # Parse and index documents
+        self.index_documents()
 
-    def load_and_parse_documents(self):
+    def index_documents(self):
         """
-        Scans docs_dir, preloading static files into memory and registering 
-        dynamic files for retrieval tools.
+        Indexes all markdown files in the docs directory.
         """
+        if not os.path.exists(self.docs_dir):
+            os.makedirs(self.docs_dir)
+            
         md_files = glob.glob(os.path.join(self.docs_dir, "*.md"))
         for filepath in md_files:
-            filename = os.path.basename(filepath)
-            if filename in ["brand_identity.md", "customer_service_sop.md"]:
-                _, body = self._parse_doc(filepath)
-                self.permanent_context += f"\n--- {filename} ---\n{body}\n"
-            else:
-                meta, body = self._parse_doc(filepath)
-                name = meta.get("name", filename.replace(".md", ""))
-                description = meta.get("description", "No description provided.")
-                self.doc_registry[name.lower()] = body
-                self.doc_descriptions.append(f"- '{name}': {description}")
-
-    def load_prompt_file(self, filename):
-        """
-        Loads a prompt template string from prompts directory.
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            # Clean out YAML frontmatter if present
+            if content.startswith("---"):
+                parts = content.split("---", 2)
+                if len(parts) >= 3:
+                    content = parts[2]
+            self.retriever.add_document(content)
         
-        Args:
-            filename: Filename within prompts folder.
-            
-        Returns:
-            The loaded template string.
-            
-        Raises:
-            FileNotFoundError if target file is missing.
+        self.retriever.fit()
+
+    def load_prompt(self, filename: str) -> str:
         """
-        path = os.path.join(_HERE, "prompts", filename)
+        Loads the system prompt from the prompts directory.
+        """
+        path = os.path.join(self.prompts_dir, filename)
         if not os.path.exists(path):
-            raise FileNotFoundError(f"Required prompt file not found: {path}")
+            # Fallback path lookup
+            path = os.path.join(_HERE, "prompts", filename)
+            
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Prompt file not found: {filename}")
+            
         with open(path, 'r', encoding='utf-8') as f:
             return f.read().strip()
 
-    def load_system_prompt(self):
+    @traceable(run_type="retriever", name="ParentChildBM25Retriever")
+    def retrieve_context(self, query: str) -> str:
         """
-        Loads the concierge system instructions.
-        
-        Returns:
-            Concierge instructions string.
-            
-        Raises:
-            FileNotFoundError if missing in all default locations.
+        Retrieves the parent markdown section for the query.
         """
-        possible_paths = [
-            self.prompt_path,
-            os.path.join(_HERE, "prompts", "system_prompt.txt"),
-            os.path.join(_HERE, "prompts", "system_prompt.md"),
-        ]
-        for path in possible_paths:
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    return f.read().strip()
-        raise FileNotFoundError(f"Required system prompt file not found in paths: {possible_paths}")
-
-    def load_all_prompts(self):
-        """
-        Loads all modular prompt file contents.
-        """
-        self.classifier_prompt = self.load_prompt_file("classifier.md")
-        self.emotion_analysis_prompt = self.load_prompt_file("emotion_analysis.md")
-        self.brand_audit_prompt = self.load_prompt_file("brand_audit.md")
-        self.fact_audit_prompt = self.load_prompt_file("fact_audit.md")
-        self.emotional_audit_prompt_template = self.load_prompt_file("emotional_audit.md")
-        self.output_guardrail_prompt = self.load_prompt_file("output_guardrail.md")
-        self.quick_fix_prompt = self.load_prompt_file("quick_fix.md")
-
-    def setup_static_prompt(self):
-        """
-        Assembles static instruction files and preloads them into self.static_prompt_content.
-        """
-        system_prompt = self.load_system_prompt()
-        doc_list_str = "\n".join(self.doc_descriptions)
-        self.static_prompt_content = (
-            f"{system_prompt}\n\n"
-            f"=== PERMANENT CONTEXT ===\n{self.permanent_context}\n\n"
-            f"=== KNOWLEDGE DOCUMENTS AVAILABLE VIA TOOL ===\n"
-            f"You have access to a tool `retrieve_document_content` which can fetch details for:\n"
-            f"{doc_list_str}\n\n"
-            f"=== ORDER TRACKING DATABASE TOOL ===\n"
-            f"You have access to a tool `look_up_order` which can fetch live tracking and shipment details for an order ID or phone number."
-        )
-
-
-    def reload_documents(self):
-        """
-        Reloads all documents dynamically from docs_dir.
-        """
-        self.doc_registry = {}
-        self.doc_descriptions = []
-        self.permanent_context = ""
-        self.load_and_parse_documents()
-        self.setup_static_prompt()
+        return self.retriever.retrieve(query)
 

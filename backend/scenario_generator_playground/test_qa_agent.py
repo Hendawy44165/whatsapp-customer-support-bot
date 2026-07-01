@@ -2,59 +2,34 @@ import os
 import sys
 import json
 import time
-from typing import List, Literal, Dict
-from pydantic import BaseModel, Field
+import shutil
+import datetime
 from dotenv import load_dotenv
 import pandas as pd
 
 # LangChain Imports
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
-# Define the expected QA Output Schema
-class QAOutput(BaseModel):
-    reasoning: str = Field(..., description="Short explanation of the state evaluation and decision.")
-    response_text: str = Field(..., description="The luxury, brand-voice response text for the user.")
-    process_instruction: Literal["request_info", "proceed_to_process", "complete", "escalate_to_human", "none"] = Field(
-        ..., description="Action instruction for the orchestrator."
-    )
-    missing_parameters: List[str] = Field(
-        default_factory=list, description="Fields currently missing and required from the customer."
-    )
+# Local imports
+_HERE = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(_HERE)
+sys.path.append(backend_dir)
 
-def evaluate_with_judge(judge_llm: ChatOpenAI, latest_user_message: str, response_text: str, RAG_context: str, router_decision: str) -> str:
-    """Invokes the LLM-as-a-judge to evaluate tone and factuality."""
-    system_prompt = (
-        "You are an objective QA evaluator judge for Nuit Fragrances customer support.\n"
-        "Your task is to evaluate the AI customer support response against the following criteria:\n\n"
-        "1. BRAND TONE: Is it calm, polite, luxury, and professional? (It must NOT sound defensive, robotic, or overly casual).\n"
-        "2. FACTUALITY: Are all prices, policies, and timelines stated in the response completely true and grounded in the RAG Context? If the RAG Context does not mention a detail, the AI response must NOT invent it.\n"
-        "3. RELEVANCE & REFUSAL: If the router decision is 'Unrelated', did the response politely refuse to answer while staying within Nuit Fragrances' domain?\n\n"
-        "You must output your evaluation in this exact format:\n"
-        "TONE: [PASS/FAIL] - Reason\n"
-        "FACTUALITY: [PASS/FAIL] - Reason\n"
-        "SCOPE: [PASS/FAIL] - Reason"
-    )
-    
-    human_content = (
-        f"=== EVALUATION DETAILS ===\n"
-        f"- Router Decision: {router_decision}\n"
-        f"- RAG Context: {RAG_context}\n"
-        f"- User Input: {latest_user_message}\n"
-        f"- AI Response: {response_text}"
-    )
-    
-    try:
-        response = judge_llm.invoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=human_content)
-        ])
-        return response.content.strip()
-    except Exception as e:
-        return f"Judge evaluation failed. Error: {e}"
+from core_agent.state import AgentState
+from core_agent.utils import DocumentAndPromptLoader
+from core_agent.nodes.qa_agent import QAAgentNode
 
-def convert_to_langchain_messages(chat_history: List[Dict[str, str]]) -> List:
-    """Converts a standard list of message dicts into LangChain message objects."""
+class MockAgent:
+    """
+    A lightweight mock CustomerServiceAgent orchestrator.
+    Passes self to nodes so they can access loaders and models.
+    """
+    def __init__(self, model, loader):
+        self.model = model
+        self.loader = loader
+
+def convert_to_langchain_messages(chat_history):
     messages = []
     for msg in chat_history:
         role = msg.get("role")
@@ -66,209 +41,151 @@ def convert_to_langchain_messages(chat_history: List[Dict[str, str]]) -> List:
     return messages
 
 def main():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    backend_dir = os.path.dirname(script_dir)
-    
-    # Load environment variables
+    # 1. Load Environment Config
     load_dotenv(dotenv_path=os.path.join(backend_dir, ".env"))
     api_key = os.getenv("PROVIDER_API_KEY")
     base_url = os.getenv("PROVIDER_BASE_URL")
     model_name = os.getenv("PROVIDER_MODEL_NAME")
     
-    # Read prompt
-    prompt_path = os.path.abspath(os.path.join(backend_dir, "core_agent", "prompts", "qa_agent.md"))
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        qa_system_prompt = f.read()
-
-    # Load scenarios
-    scenarios_json_path = os.path.join(script_dir, "qa_scenarios.json")
+    if not api_key:
+        print("Error: PROVIDER_API_KEY environment variable is missing.")
+        sys.exit(1)
+        
+    # 2. Setup Timestamped Run Directory
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(_HERE, "runs", "qa_agent", timestamp)
+    os.makedirs(run_dir, exist_ok=True)
+    
+    # Paths for snapshot files
+    scenarios_json_path = os.path.join(_HERE, "brand_voice_scenarios.json")
+    qa_prompt_path = os.path.abspath(os.path.join(backend_dir, "core_agent", "prompts", "qa_agent.md"))
+    
+    copied_script_path = os.path.join(run_dir, "test_qa_agent.py")
+    copied_scenarios_path = os.path.join(run_dir, "brand_voice_scenarios.json")
+    copied_prompt_path = os.path.join(run_dir, "qa_agent.md")
+    results_csv_path = os.path.join(run_dir, "results.csv")
+    manual_audit_path = os.path.join(run_dir, "manual_audit.md")
+    
+    # Copy source files for reproducibility snapshot
+    shutil.copy2(__file__, copied_script_path)
+    if os.path.exists(scenarios_json_path):
+        shutil.copy2(scenarios_json_path, copied_scenarios_path)
+    if os.path.exists(qa_prompt_path):
+        shutil.copy2(qa_prompt_path, copied_prompt_path)
+        
+    # 3. Load Scenarios
     if not os.path.exists(scenarios_json_path):
-        print(f"Error: Scenarios file not found at {scenarios_json_path}. Please create it first.")
+        print(f"Error: Scenarios file not found at {scenarios_json_path}.")
         sys.exit(1)
         
     with open(scenarios_json_path, "r", encoding="utf-8") as f:
         scenarios = json.load(f)
         
-    # Initialize LLMs
-    llm = ChatOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        model=model_name,
-        temperature=0.2,
-        max_retries=1
-    )
-    structured_qa_agent = llm.with_structured_output(QAOutput)
-    
-    # Initialize a separate LLM for the judge with temperature 0.0
-    judge_llm = ChatOpenAI(
+    # 4. Initialize Core Components
+    model = ChatOpenAI(
         api_key=api_key,
         base_url=base_url,
         model=model_name,
         temperature=0.0,
         max_retries=1
     )
-
+    
+    loader = DocumentAndPromptLoader(
+        docs_dir=os.path.join(backend_dir, "core_agent", "docs"),
+        prompts_dir=os.path.join(backend_dir, "core_agent", "prompts")
+    )
+    
+    agent = MockAgent(model, loader)
+    qa_node = QAAgentNode(agent)
+    
     results = []
-
-    print(f"\nStarting QA Agent test suite for {len(scenarios)} scenarios...")
+    
+    # 5. Run Scenarios (Terminal Clean Log)
+    print(f"\nStarting QA Agent Test Suite ({len(scenarios)} Scenarios)...")
     for index, scenario in enumerate(scenarios, 1):
         scenario_id = scenario.get("id")
-        description = scenario.get("description")
-        user_message = scenario.get("user_input")
-        router_decision = scenario.get("router_decision")
-        chat_history_raw = scenario.get("chat_history")
+        desc = scenario.get("description")
+        user_input = scenario.get("user_input")
+        chat_history = scenario.get("chat_history", [])
+        rag_context = scenario.get("rag_context", "")
+        crm_result = scenario.get("crm_result", {})
+        qa_mode = scenario.get("qa_mode", "static_faq") # used to simulate the process status
         
-        print(f"\n--------------------------------------------------")
-        print(f"[{index}/{len(scenarios)}] ID {scenario_id}: {description}")
-        print(f"User Input: '{user_message}'")
+        print(f"Running [{index}/{len(scenarios)}] Scenario ID {scenario_id}: {desc}... ", end="", flush=True)
         
-        # --- Simulating Turn 1 (Initial Call) ---
-        process_state = "idle"
-        initial_params = scenario.get("initial_parameters", {})
-        initial_rag = scenario.get("initial_rag_context", "")
+        # Translate scenario mode to AgentState variables
+        active_process = "WISMO" if qa_mode in ("ask_for_parameters", "present_results") else None
+        process_state = "collecting" if qa_mode == "ask_for_parameters" else "completed" if qa_mode == "present_results" else "idle"
         
-        input_payload_1 = (
-            f"=== STRUCTURED INPUT ===\n"
-            f"- Router Decision: {router_decision}\n"
-            f"- Process State: {process_state}\n"
-            f"- Extracted Parameters: {json.dumps(initial_params)}\n"
-            f"- RAG Context: {initial_rag}\n"
-            f"- Latest User Message: {user_message}"
-        )
+        # Run real RAG retrieval if it's a general FAQ (no active process)
+        if not active_process:
+            real_rag = loader.retrieve_context(user_input)
+        else:
+            real_rag = ""
         
-        # Parse history into LangChain messages
-        langchain_history = convert_to_langchain_messages(chat_history_raw)
+        # Prepare state
+        state: AgentState = {
+            "messages": convert_to_langchain_messages(chat_history),
+            "rag_context": real_rag,
+            "active_process": active_process,
+            "process_state": process_state,
+            "extracted_parameters": {},
+            "crm_result": crm_result,
+            "escalation_report": {}
+        }
+
+
         
-        # Build messages block: [SystemPrompt, History..., LatestUserMessage]
-        messages_1 = [SystemMessage(content=qa_system_prompt)]
-        messages_1.extend(langchain_history)
-        messages_1.append(HumanMessage(content=input_payload_1))
-        
-        t1_start = time.time()
+        # Invoke Node
+        start_time = time.time()
         try:
-            qa_out_1 = structured_qa_agent.invoke(messages_1)
-            t1_duration = time.time() - t1_start
+            node_output = qa_node(state)
+            agent_output = node_output.get("response", "")
+            duration = time.time() - start_time
+            print("DONE")
         except Exception as e:
-            print(f"  Execution failed at Turn 1: {e}")
-            results.append({
-                "Model Name": model_name or "Unknown Model",
-                "User Input": user_message,
-                "Critique": f"Turn 1 Error: {e}",
-                "Topic": router_decision,
-                "Instruction": "error",
-                "Response": "error",
-                "Status": "FAIL"
-            })
-            continue
-
-        print(f"  Turn 1 Output [Instruction: {qa_out_1.process_instruction}]:")
-        print(f"    Reasoning: {qa_out_1.reasoning}")
-        print(f"    Response:  '{qa_out_1.response_text}'")
-
-        final_response_text = qa_out_1.response_text
-        final_instruction = qa_out_1.process_instruction
-        final_reasoning = qa_out_1.reasoning
-        final_rag_context_used = initial_rag
-        turn_count = 1
+            agent_output = f"ERROR: Execution failed: {str(e)}"
+            print("FAILED")
+            
+        # Format chat history for readable display in CSV
+        history_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in chat_history])
         
-        # --- Simulating Turn 2 (Background task completed, if applicable) ---
-        if qa_out_1.process_instruction == "proceed_to_process":
-            print(f"  --> Simulating background process execution...")
-            process_state_2 = "finished"
-            
-            # Merge mock process results into parameters and RAG context
-            finished_params = {**initial_params, **scenario.get("background_process_mock_parameters", {})}
-            finished_rag = scenario.get("background_process_result_rag", "")
-            
-            input_payload_2 = (
-                f"=== STRUCTURED INPUT ===\n"
-                f"- Router Decision: {router_decision}\n"
-                f"- Process State: {process_state_2}\n"
-                f"- Extracted Parameters: {json.dumps(finished_params)}\n"
-                f"- RAG Context: {finished_rag}\n"
-                f"- Latest User Message: {user_message}"
-            )
-            
-            # For turn 2, append the intermediate agent response to the history simulation
-            langchain_history_t2 = list(langchain_history)
-            langchain_history_t2.append(HumanMessage(content=user_message))
-            langchain_history_t2.append(AIMessage(content=qa_out_1.response_text))
-            
-            messages_2 = [SystemMessage(content=qa_system_prompt)]
-            messages_2.extend(langchain_history_t2)
-            messages_2.append(HumanMessage(content=input_payload_2))
-            
-            try:
-                qa_out_2 = structured_qa_agent.invoke(messages_2)
-                turn_count = 2
-            except Exception as e:
-                print(f"    Execution failed at Turn 2: {e}")
-                results.append({
-                    "Model Name": model_name or "Unknown Model",
-                    "User Input": user_message,
-                    "Critique": f"Turn 2 Error: {e}",
-                    "Topic": router_decision,
-                    "Instruction": "error",
-                    "Response": "error",
-                    "Status": "FAIL"
-                })
-                continue
-                
-            print(f"    Turn 2 Output [Instruction: {qa_out_2.process_instruction}]:")
-            print(f"      Reasoning: {qa_out_2.reasoning}")
-            print(f"      Response:  '{qa_out_2.response_text}'")
-            
-            final_response_text = qa_out_2.response_text
-            final_instruction = qa_out_2.process_instruction
-            final_reasoning = qa_out_2.reasoning
-            final_rag_context_used = finished_rag
-            
-        # --- Run Judge Evaluation ---
-        judge_output = evaluate_with_judge(
-            judge_llm=judge_llm,
-            latest_user_message=user_message,
-            response_text=final_response_text,
-            RAG_context=final_rag_context_used,
-            router_decision=router_decision
-        )
-        print(f"    Judge Verdict:\n      " + "\n      ".join(judge_output.split("\n")))
-        
-        # Check overall status
-        failed_tests = []
-        if "FAIL" in judge_output:
-            judge_fails = [line for line in judge_output.split("\n") if "FAIL" in line]
-            failed_tests.extend(judge_fails)
-            
-        # Verify expected instruction matches
-        expected_final_instr = scenario.get("expected_final_instruction")
-        if expected_final_instr and final_instruction != expected_final_instr:
-            failed_tests.append(f"Instruction mismatch: got '{final_instruction}', expected '{expected_final_instr}'.")
-
-        status = "PASS" if not failed_tests else "FAIL"
-        critique_log = f"Agent reasoning: {final_reasoning} | Judge verdict: {judge_output}"
-        
+        # Save to list
         results.append({
-            "Model Name": model_name or "Unknown Model",
-            "User Input": user_message,
-            "Critique": critique_log,
-            "Topic": router_decision,
-            "Instruction": final_instruction,
-            "Response": final_response_text,
-            "Status": status
+            "ID": scenario_id,
+            "Model": model_name,
+            "User_Input": user_input,
+            "Chat_History": history_text,
+            "RAG_Context": real_rag,
+            "Uploaded_File": "None",
+            "Agent_Output": agent_output,
+            "Audit_Status": "", # Left blank for user audit
+            "Audit_Notes": ""   # Left blank for user notes
         })
         
-        time.sleep(0.5)
-
-    # Export results to CSV
+    # 6. Save Results to CSV
     df = pd.DataFrame(results)
-    output_path = os.path.join(script_dir, "qa_agent_test_results.csv")
-    df.to_csv(output_path, index=False, encoding="utf-8-sig")
+    df.to_csv(results_csv_path, index=False)
     
-    print("\n" + "="*50)
-    print(f"Execution complete!")
-    print(f"Results exported successfully to:")
-    print(f"  {output_path}")
-    print("="*50)
+    # 7. Write Markdown Manual Audit Template
+    with open(manual_audit_path, "w", encoding="utf-8") as f:
+        f.write("# QA Agent Brand Voice Manual Audit Report\n\n")
+        f.write(f"**Date:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"**Run Folder:** `runs/qa_agent/{timestamp}/`\n\n")
+        f.write("## Audit Guidelines\n")
+        f.write("1. **Brand Voice:** Calm, luxury tone? Under 3 sentences? No emojis?\n")
+        f.write("2. **WhatsApp Formatting:** Uses `*bold*` (single asterisk)? No double asterisks `**`?\n")
+        f.write("3. **Groundedness:** Matches facts in RAG Context exactly? No hallucinations?\n\n")
+        f.write("## Scenario Scores\n\n")
+        for res in results:
+            f.write(f"### [Scenario ID {res['ID']}] {res['User_Input']}\n")
+            f.write(f"- **Agent Output:** {res['Agent_Output']}\n")
+            f.write("- **Audit Status:** [ ] PASS  [ ] FAIL\n")
+            f.write("- **Audit Notes:** \n\n")
+            
+    print(f"\nTest execution complete.")
+    print(f"Results CSV: {results_csv_path}")
+    print(f"Manual Audit Template: {manual_audit_path}\n")
 
 if __name__ == "__main__":
     main()

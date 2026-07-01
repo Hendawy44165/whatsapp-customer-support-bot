@@ -9,6 +9,7 @@ from .quick_fixer import QuickFixerNode
 from .iteration_enhancer import IterationEnhancerNode
 from .handoff import HumanHandoffNode
 from .save_history import SaveHistoryNode
+from .qa_agent import QAAgentNode
 
 __all__ = [
     "BaseNode",
@@ -22,5 +23,7 @@ __all__ = [
     "IterationEnhancerNode",
     "HumanHandoffNode",
     "SaveHistoryNode",
+    "QAAgentNode",
 ]
+
 
