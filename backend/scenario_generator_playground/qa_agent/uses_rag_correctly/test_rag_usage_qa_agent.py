@@ -204,6 +204,7 @@ def main():
         
         # Save to list
         results.append({
+            "ID": scenario_id,
             "Model": model_name,
             "Chat_History": history_text,
             "RAG_Context": final_state.get("rag_output", "") if final_state else "",
