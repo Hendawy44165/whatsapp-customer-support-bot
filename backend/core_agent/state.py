@@ -2,29 +2,30 @@ from typing import Annotated, List, Dict, Literal
 from typing_extensions import TypedDict
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
-from pydantic import BaseModel, Field
+
+class RouterDecision(TypedDict):
+    next_agent: Literal["qa", "react", "escalate"]
+    emotion : str
+    classification : Literal["WISMO", "Return", "Exchange", "Billing", "General Inquery", "Other"]
+
+class EscalationReport(TypedDict):
+    report : str
+    customer_emotion : Literal["anger", "joy", "sadness", "fear", "surprise", "disgust", "neutral", "frustration"]
+    urgency : Literal["low", "medium", "high", "critical"]
+    customer_name : str
+    customer_age : int
+
+class ReactState(TypedDict):
+    missing_customer_data : List[str]
+    query_rationale : str
+    output : dict
+    status_code : Literal["success", "incomplete_input", "failure", "not_triggered"]
 
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], add_messages]  # Pure User-Agent Chat History
-    active_process: str                                   # None | "WISMO" | "Return" | "Exchange"
-    process_state: str                                    # "idle" | "collecting" | "completed" | "failed"
-    extracted_parameters: dict                            # Collected parameters, e.g. {"phone": "010..."}
-    crm_result: dict                                      # Output of mock CRM tool lookup
-    rag_context: str                                      # RAG context (Isolated for QA Agent)
-    escalation_report: dict                               # Structured JSON for human handoff
-
-class RouterResult(BaseModel):
-    decision: Literal["qa", "react", "escalate"] = Field(
-        ..., description="The next agent to route the query to."
-    )
-
-class EscalationReport(BaseModel):
-    reason: str = Field(
-        ..., description="The reason for human handoff (e.g. anger, failure, stalling)."
-    )
-    chat_summary: str = Field(
-        ..., description="A short summary of the user's inquiry."
-    )
-    urgency: float = Field(
-        ..., description="Urgency priority level from 0.0 to 1.0."
-    )
+    process_state: str                                    # "idle" | "collecting" | "completed" | "failed" | "no_info_found"
+    learned_user_info : dict
+    router_decision : RouterDecision
+    escalation_report : EscalationReport
+    react_state : ReactState
+    rag_output : str

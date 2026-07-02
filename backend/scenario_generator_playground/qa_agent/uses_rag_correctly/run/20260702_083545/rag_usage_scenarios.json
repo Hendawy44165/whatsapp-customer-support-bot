@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "user_input": "Can I return a perfume bottle if I already opened and sprayed it? I bought it yesterday but don't like the smell.",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "Can I return a perfume bottle if I already opened and sprayed it? I bought it yesterday but don't like the smell."
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": 2,
+    "user_input": "Can I return a perfume bottle if I already opened and sprayed it?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "Do you sell Nuit Signature 50ml?"
+      },
+      {
+        "role": "assistant",
+        "content": "Yes, we do. It features premium fragrance notes of amber, musk, and dark vanilla."
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  }
+]
