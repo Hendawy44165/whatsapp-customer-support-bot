@@ -29,3 +29,4 @@ class AgentState(TypedDict):
     escalation_report : EscalationReport
     react_state : ReactState
     rag_output : str
+    agent_queries : str

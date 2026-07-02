@@ -11,9 +11,11 @@ class ParentChildBM25Retriever:
     A lightweight, zero-dependency Parent-Child retriever.
     Splits markdown documents into Parent sections (headers) and Child chunks (paragraphs).
     Indexes children using a clean, vectorized-equivalent TF-IDF/BM25 scoring approach.
+    Now maps child matches to the entire document text instead of just the parent section.
     """
     def __init__(self):
-        self.parents = [] # List of parent text sections
+        self.documents = [] # List of entire document contents
+        self.parents = [] # List of (parent_text, document_index) tuples
         self.children = [] # List of (child_text, parent_index) tuples
         self.vocab = set()
         self.idf = {}
@@ -22,8 +24,11 @@ class ParentChildBM25Retriever:
 
     def add_document(self, text: str):
         """
-        Parses a markdown document into parent headers and child paragraphs.
+        Parses a markdown document into parent headers and child paragraphs, storing the full document content.
         """
+        doc_idx = len(self.documents)
+        self.documents.append(text)
+        
         # Split by headers: #, ##, ###
         sections = re.split(r'\n(?=#+ )', text)
         for section in sections:
@@ -32,7 +37,7 @@ class ParentChildBM25Retriever:
                 continue
             
             parent_idx = len(self.parents)
-            self.parents.append(section)
+            self.parents.append((section, doc_idx))
             
             # Split section into child chunks (paragraphs/sentences)
             paragraphs = section.split('\n\n')
@@ -79,7 +84,7 @@ class ParentChildBM25Retriever:
 
     def retrieve(self, query: str, top_k: int = 1) -> str:
         """
-        Searches child chunks and returns the full parent section of the best match.
+        Searches child chunks and returns the entire document text of the best match.
         """
         if not self.children:
             return ""
@@ -112,7 +117,8 @@ class ParentChildBM25Retriever:
             
         best_idx = scores.index(max(scores))
         _, parent_idx = self.children[best_idx]
-        return self.parents[parent_idx]
+        _, doc_idx = self.parents[parent_idx]
+        return self.documents[doc_idx]
 
 
 class DocumentAndPromptLoader:

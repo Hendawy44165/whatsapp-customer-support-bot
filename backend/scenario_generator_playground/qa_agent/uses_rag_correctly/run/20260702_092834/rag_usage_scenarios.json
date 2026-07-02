@@ -1,0 +1,114 @@
+[
+  {
+    "id": "sc_1_direct",
+    "description": "Grounding (Direct): Standard domestic shipping fee request",
+    "user_input": "How much is shipping to Alexandria?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "How much is shipping to Alexandria?"
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_1_tricky",
+    "description": "Grounding (Tricky): Shipping query targeting Mars (out-of-scope fee request)",
+    "user_input": "Does shipping to Mars cost EGP 80?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "Does shipping to Mars cost EGP 80?"
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_2_direct",
+    "description": "Implicit/Explicit (Direct): Combined shipping fee and time inquiry",
+    "user_input": "What is the shipping cost to Cairo and how long does it take?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "What is the shipping cost to Cairo and how long does it take?"
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_2_tricky",
+    "description": "Implicit/Explicit (Tricky): Cart value exceeds threshold for free shipping",
+    "user_input": "I have 2000 EGP worth of items in my cart. Is there any way to save on shipping costs to Giza, or do I have to pay?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "I have 2000 EGP worth of items in my cart. Is there any way to save on shipping costs to Giza, or do I have to pay?"
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_3_direct",
+    "description": "Missing Info/Fallback (Direct): Query completely out-of-scope (Stock markets)",
+    "user_input": "Where can I buy stocks of Nuit Fragrances?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "Where can I buy stocks of Nuit Fragrances?"
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_3_tricky",
+    "description": "Missing Info/Fallback (Tricky): Plausible but undocumented product variant",
+    "user_input": "Do you sell the Nuit Signature in a solid wax cologne format?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "Do you sell the Nuit Signature in a solid wax cologne format?"
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_4_direct",
+    "description": "Memory Isolation (Direct): Unrelated shipping history, new returns query",
+    "user_input": "Can I return a sale item?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "How long does shipping to France take?"
+      },
+      {
+        "role": "assistant",
+        "content": "Shipping to France takes 7 to 14 business days."
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  },
+  {
+    "id": "sc_4_tricky",
+    "description": "Memory Isolation (Tricky): Shift from defect replacement to change-of-mind scent preference exchange",
+    "user_input": "Can I return it to get the vanilla scent instead?",
+    "chat_history": [
+      {
+        "role": "user",
+        "content": "My bottle arrived leaking and damaged. Can you help?"
+      },
+      {
+        "role": "assistant",
+        "content": "I am so sorry to hear that. We will happily send you a free replacement bottle for the transit damage."
+      }
+    ],
+    "emotion": "neutral",
+    "classification": "General Inquery"
+  }
+]

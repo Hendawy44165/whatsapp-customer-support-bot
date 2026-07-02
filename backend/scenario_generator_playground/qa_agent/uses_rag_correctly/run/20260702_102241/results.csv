@@ -1,0 +1,406 @@
+ID,Model,Chat_History,Agent_Queries,RAG_Context,Final_Process_State,Agent_Output
+sc_1_direct,gpt-4o-mini,USER: How much is shipping to Alexandria?,shipping cost Alexandria,"
+# NUIT FRAGRANCES: FAQ
+
+## 1. GEOGRAPHIC FULFILLMENT SCOPE & SHIPPING TIMELINES
+* **Query Intent Vector:** International shipping availability, local shipping scope, shipping durations, processing timelines.
+* **Domestic Fulfillment Architecture:** Nuit ships nationwide across all governorates within the Arab Republic of Egypt. Orders are dispatched from the central fulfillment facility via national tier-one logistics partners.
+  * *Domestic Transit Timeline:* Deliveries are completed within a strict window of **3 to 5 business days** following standard warehouse processing latency (1 to 2 business days).
+* **Global Fulfillment Architecture:** Nuit ships internationally to all globally serviceable destinations via verified express air courier frameworks.
+  * *International Transit Timeline:* Deliveries arrive at international destination borders within **7 to 14 business days** following custom customs clearancing protocols.
+
+## 2. STANDARD SHIPPING FEES & CAMPAIGN MOTIVATORS
+* **Query Intent Vector:** Shipping prices, hidden fees, free delivery requirements, international delivery rates.
+* **Domestic Delivery Cost Matrix:** Applied as a locked flat delivery charge of **EGP 80.00** nationwide across Egypt, independent of geographic distance or governorate tier.
+  * *Free Delivery Promotion:* The standard domestic shipping fee is systematically waived and dropped to **EGP 0.00** for any single customer checkout session that carries a net shopping cart value exceeding **EGP 1,500.00**.
+* **International Delivery Cost Matrix:** Applied as a locked flat express air cargo fee of **EGP 650.00** across all international destination territories.
+
+## 3. CORE RETURN & EXCHANGE CLAUSES (OFFICIAL REFUND POLICY PATHS)
+* **Can I return a fragrance if I don't like the smell or change my mind?**
+  * *System Response Framework:* No. To maintain fairness, strict hygienic standards, and high quality control across batches, Nuit enforces a strict **defective or damaged products ONLY policy**. Returns, refunds, or variant exchanges for reasons unrelated to physical damage (such as change of mind, blind-buy dissatisfaction, or personal scent preference shifts) are **NOT permitted**.
+* **What is the absolute window to report an issue with an order?**
+  * *System Response Framework:* Customers must submit an explicit request via Instagram Direct or WhatsApp DM within a strict window of **14 calendar days** from the verified delivery date. Any requests sent after the 14-day window expires cannot be approved under any circumstances, regardless of the product type or issue.
+* **Can I return a full-size perfume bottle if I don't use it but a sample exists?**
+  * *System Response Framework:* No. If Nuit offers a purchasable sample format of a specific fragrance on the online store, the full-size version is entirely **ineligible** for exchange or refund. This binding constraint applies even if the sample format is temporarily marked out of stock or unavailable at the time of your request. Nuit strongly counsels clients to buy a sample first to validate personal preference.
+* **Can I return or exchange items purchased during a sale or promotion?**
+  * *System Response Framework:* No. Any products bought using discount codes, bundle offers, seasonal marketing promotions, special tiered pricing, or campaign markdowns are classified as **final sale** and are strictly ineligible for exchange or refund.
+* **Can I return Khamrias or Concentrated Perfume Oils?**
+  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all Khamrias and concentrated perfume oils (""Shots"") are completely non-refundable and non-exchangeable under any circumstances.
+* **Can I return a limited edition or special collaborative fragrance?**
+  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection (e.g., *Avec Hatshepsut - Nuit X Temraza*) is strictly non-returnable.
+
+## 4. LOGISTICS EXCEPTION HANDLING & DAMAGED ON ARRIVAL WORKFLOWS
+* **My bottle arrived leaking, broken, or defective. What is the resolution process?**
+  * *System Response Framework:* If an item arrives leaking, broken, or clearly defective due to transit handling or manufacturing errors, Nuit will provide an exchange or a refund depending entirely on live inventory availability. 
+  * *Required Action:* The customer must contact support via WhatsApp or Instagram DM within the **14-day window**, providing their order number, a brief description of the issue, and clear photographic or video assets showing the damage.
+  * *Assessment Note:* Minor leaks, faint scuffs, or superficial packaging marks may naturally occur during transit or due to temperature variables and are not automatically considered grounds for a return. Nuit reserves the right to assess the media assets and determine eligibility.
+* **Are there any restocking fees or extra delivery costs for an approved damaged return?**
+  * *System Response Framework:* There are **no extra fees** or processing charges applied to approved returns or exchanges due to verified manufacturing defects or transit damage. However, original baseline shipping fees paid during the initial checkout sequence are entirely non-refundable.
+* **How long does it take to receive a money refund if approved?**
+  * *System Response Framework:* Once an eligible item is received back at the central facility and passes physical inspection, refunds are processed and sent back to the original method of payment within **14 business days**.
+",idle,"The shipping fee to Alexandria is a flat rate of *EGP 80.00*. If your order exceeds *EGP 1,500.00*, the shipping cost will be waived, and you will enjoy free delivery. Should you require any further assistance, please let me know."
+sc_1_tricky,gpt-4o-mini,USER: Does shipping to Mars cost EGP 80?,shipping cost Mars,"
+# NUIT FRAGRANCES: FAQ
+
+## 1. GEOGRAPHIC FULFILLMENT SCOPE & SHIPPING TIMELINES
+* **Query Intent Vector:** International shipping availability, local shipping scope, shipping durations, processing timelines.
+* **Domestic Fulfillment Architecture:** Nuit ships nationwide across all governorates within the Arab Republic of Egypt. Orders are dispatched from the central fulfillment facility via national tier-one logistics partners.
+  * *Domestic Transit Timeline:* Deliveries are completed within a strict window of **3 to 5 business days** following standard warehouse processing latency (1 to 2 business days).
+* **Global Fulfillment Architecture:** Nuit ships internationally to all globally serviceable destinations via verified express air courier frameworks.
+  * *International Transit Timeline:* Deliveries arrive at international destination borders within **7 to 14 business days** following custom customs clearancing protocols.
+
+## 2. STANDARD SHIPPING FEES & CAMPAIGN MOTIVATORS
+* **Query Intent Vector:** Shipping prices, hidden fees, free delivery requirements, international delivery rates.
+* **Domestic Delivery Cost Matrix:** Applied as a locked flat delivery charge of **EGP 80.00** nationwide across Egypt, independent of geographic distance or governorate tier.
+  * *Free Delivery Promotion:* The standard domestic shipping fee is systematically waived and dropped to **EGP 0.00** for any single customer checkout session that carries a net shopping cart value exceeding **EGP 1,500.00**.
+* **International Delivery Cost Matrix:** Applied as a locked flat express air cargo fee of **EGP 650.00** across all international destination territories.
+
+## 3. CORE RETURN & EXCHANGE CLAUSES (OFFICIAL REFUND POLICY PATHS)
+* **Can I return a fragrance if I don't like the smell or change my mind?**
+  * *System Response Framework:* No. To maintain fairness, strict hygienic standards, and high quality control across batches, Nuit enforces a strict **defective or damaged products ONLY policy**. Returns, refunds, or variant exchanges for reasons unrelated to physical damage (such as change of mind, blind-buy dissatisfaction, or personal scent preference shifts) are **NOT permitted**.
+* **What is the absolute window to report an issue with an order?**
+  * *System Response Framework:* Customers must submit an explicit request via Instagram Direct or WhatsApp DM within a strict window of **14 calendar days** from the verified delivery date. Any requests sent after the 14-day window expires cannot be approved under any circumstances, regardless of the product type or issue.
+* **Can I return a full-size perfume bottle if I don't use it but a sample exists?**
+  * *System Response Framework:* No. If Nuit offers a purchasable sample format of a specific fragrance on the online store, the full-size version is entirely **ineligible** for exchange or refund. This binding constraint applies even if the sample format is temporarily marked out of stock or unavailable at the time of your request. Nuit strongly counsels clients to buy a sample first to validate personal preference.
+* **Can I return or exchange items purchased during a sale or promotion?**
+  * *System Response Framework:* No. Any products bought using discount codes, bundle offers, seasonal marketing promotions, special tiered pricing, or campaign markdowns are classified as **final sale** and are strictly ineligible for exchange or refund.
+* **Can I return Khamrias or Concentrated Perfume Oils?**
+  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all Khamrias and concentrated perfume oils (""Shots"") are completely non-refundable and non-exchangeable under any circumstances.
+* **Can I return a limited edition or special collaborative fragrance?**
+  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection (e.g., *Avec Hatshepsut - Nuit X Temraza*) is strictly non-returnable.
+
+## 4. LOGISTICS EXCEPTION HANDLING & DAMAGED ON ARRIVAL WORKFLOWS
+* **My bottle arrived leaking, broken, or defective. What is the resolution process?**
+  * *System Response Framework:* If an item arrives leaking, broken, or clearly defective due to transit handling or manufacturing errors, Nuit will provide an exchange or a refund depending entirely on live inventory availability. 
+  * *Required Action:* The customer must contact support via WhatsApp or Instagram DM within the **14-day window**, providing their order number, a brief description of the issue, and clear photographic or video assets showing the damage.
+  * *Assessment Note:* Minor leaks, faint scuffs, or superficial packaging marks may naturally occur during transit or due to temperature variables and are not automatically considered grounds for a return. Nuit reserves the right to assess the media assets and determine eligibility.
+* **Are there any restocking fees or extra delivery costs for an approved damaged return?**
+  * *System Response Framework:* There are **no extra fees** or processing charges applied to approved returns or exchanges due to verified manufacturing defects or transit damage. However, original baseline shipping fees paid during the initial checkout sequence are entirely non-refundable.
+* **How long does it take to receive a money refund if approved?**
+  * *System Response Framework:* Once an eligible item is received back at the central facility and passes physical inspection, refunds are processed and sent back to the original method of payment within **14 business days**.
+",no_info_found,"The shipping cost to Mars is not specified in our records, as we currently only offer shipping to serviceable destinations on Earth. For domestic shipping within Egypt, the fee is a flat rate of *EGP 80.00*. If you have any further inquiries or need assistance, please let me know.
+
+I apologize, but I am unable to locate the details regarding shipping to Mars in my records. I will transfer you to a human specialist."
+sc_2_direct,gpt-4o-mini,USER: What is the shipping cost to Cairo and how long does it take?,"shipping cost Cairo, shipping time to Cairo","
+# NUIT FRAGRANCES: FAQ
+
+## 1. GEOGRAPHIC FULFILLMENT SCOPE & SHIPPING TIMELINES
+* **Query Intent Vector:** International shipping availability, local shipping scope, shipping durations, processing timelines.
+* **Domestic Fulfillment Architecture:** Nuit ships nationwide across all governorates within the Arab Republic of Egypt. Orders are dispatched from the central fulfillment facility via national tier-one logistics partners.
+  * *Domestic Transit Timeline:* Deliveries are completed within a strict window of **3 to 5 business days** following standard warehouse processing latency (1 to 2 business days).
+* **Global Fulfillment Architecture:** Nuit ships internationally to all globally serviceable destinations via verified express air courier frameworks.
+  * *International Transit Timeline:* Deliveries arrive at international destination borders within **7 to 14 business days** following custom customs clearancing protocols.
+
+## 2. STANDARD SHIPPING FEES & CAMPAIGN MOTIVATORS
+* **Query Intent Vector:** Shipping prices, hidden fees, free delivery requirements, international delivery rates.
+* **Domestic Delivery Cost Matrix:** Applied as a locked flat delivery charge of **EGP 80.00** nationwide across Egypt, independent of geographic distance or governorate tier.
+  * *Free Delivery Promotion:* The standard domestic shipping fee is systematically waived and dropped to **EGP 0.00** for any single customer checkout session that carries a net shopping cart value exceeding **EGP 1,500.00**.
+* **International Delivery Cost Matrix:** Applied as a locked flat express air cargo fee of **EGP 650.00** across all international destination territories.
+
+## 3. CORE RETURN & EXCHANGE CLAUSES (OFFICIAL REFUND POLICY PATHS)
+* **Can I return a fragrance if I don't like the smell or change my mind?**
+  * *System Response Framework:* No. To maintain fairness, strict hygienic standards, and high quality control across batches, Nuit enforces a strict **defective or damaged products ONLY policy**. Returns, refunds, or variant exchanges for reasons unrelated to physical damage (such as change of mind, blind-buy dissatisfaction, or personal scent preference shifts) are **NOT permitted**.
+* **What is the absolute window to report an issue with an order?**
+  * *System Response Framework:* Customers must submit an explicit request via Instagram Direct or WhatsApp DM within a strict window of **14 calendar days** from the verified delivery date. Any requests sent after the 14-day window expires cannot be approved under any circumstances, regardless of the product type or issue.
+* **Can I return a full-size perfume bottle if I don't use it but a sample exists?**
+  * *System Response Framework:* No. If Nuit offers a purchasable sample format of a specific fragrance on the online store, the full-size version is entirely **ineligible** for exchange or refund. This binding constraint applies even if the sample format is temporarily marked out of stock or unavailable at the time of your request. Nuit strongly counsels clients to buy a sample first to validate personal preference.
+* **Can I return or exchange items purchased during a sale or promotion?**
+  * *System Response Framework:* No. Any products bought using discount codes, bundle offers, seasonal marketing promotions, special tiered pricing, or campaign markdowns are classified as **final sale** and are strictly ineligible for exchange or refund.
+* **Can I return Khamrias or Concentrated Perfume Oils?**
+  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all Khamrias and concentrated perfume oils (""Shots"") are completely non-refundable and non-exchangeable under any circumstances.
+* **Can I return a limited edition or special collaborative fragrance?**
+  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection (e.g., *Avec Hatshepsut - Nuit X Temraza*) is strictly non-returnable.
+
+## 4. LOGISTICS EXCEPTION HANDLING & DAMAGED ON ARRIVAL WORKFLOWS
+* **My bottle arrived leaking, broken, or defective. What is the resolution process?**
+  * *System Response Framework:* If an item arrives leaking, broken, or clearly defective due to transit handling or manufacturing errors, Nuit will provide an exchange or a refund depending entirely on live inventory availability. 
+  * *Required Action:* The customer must contact support via WhatsApp or Instagram DM within the **14-day window**, providing their order number, a brief description of the issue, and clear photographic or video assets showing the damage.
+  * *Assessment Note:* Minor leaks, faint scuffs, or superficial packaging marks may naturally occur during transit or due to temperature variables and are not automatically considered grounds for a return. Nuit reserves the right to assess the media assets and determine eligibility.
+* **Are there any restocking fees or extra delivery costs for an approved damaged return?**
+  * *System Response Framework:* There are **no extra fees** or processing charges applied to approved returns or exchanges due to verified manufacturing defects or transit damage. However, original baseline shipping fees paid during the initial checkout sequence are entirely non-refundable.
+* **How long does it take to receive a money refund if approved?**
+  * *System Response Framework:* Once an eligible item is received back at the central facility and passes physical inspection, refunds are processed and sent back to the original method of payment within **14 business days**.
+
+
+---
+
+
+# NUIT FRAGRANCES: ICP
+
+## 1. BASIC USER METRICS
+
+* **Age Bracket:** 20–45 years old.
+* **Geographic Distribution:** Luxury urban residential developments and high-net-worth commercial centers in Egypt.
+* *Greater Cairo East:* New Cairo, Tagamoa District, Madinaty, El Shorouk, and premium sectors of Heliopolis.
+* *Greater Cairo West:* Sheikh Zayed City, 6th of October City, and established historic neighborhoods of Maadi and Zamalek.
+* *Coastal Zones:* Affluent Mediterranean residential and lifestyle districts of Alexandria.
+
+
+* **Professional Status:** Corporate professionals, multinational workers, creative directors, tech entrepreneurs, and specialized independent consultants.
+* **Socioeconomic Positioning:** Middle-to-upper class. Highly educated individuals who understand global brand value but seek optimal asset allocation in their lifestyle purchases.
+
+---
+
+## 2. INTERESTS & CULTURAL TOUCHPOINTS
+
+* **Luxury & Aesthetics:** High interest in contemporary industrial design, clean minimalist architecture, premium packaging, and artisanal craft.
+* **Business & Innovation:** Strongly engaged with local business ecosystems, local investment narratives, and high-production economic content (e.g., dedicated followers of *Shark Tank Egypt*).
+* **Lifestyle & Media:** Active consumers of boutique fashion, premium culinary experiences, global travel, and curated lifestyle aesthetics on visual social networks. They appreciate the preservation of high-tier local manufacturing and local entrepreneurial success stories.
+
+---
+
+## 3. CORE CONSUMER FEARS
+
+* **The Overpaying Trap:** Profound aversion to paying massive, inflated luxury premiums on imported European fragrances caused by ongoing currency devaluations and steep local import tariffs.
+* **Performance Drop-Off:** Fear of investing in alternative domestic brands that utilize cheap, low-tier synthetic oils that fade rapidly, lack depth, or irritate the skin.
+* **Friction in Discovery:** Anxiety about purchasing full-sized fragrance bottles online without testing the scent profile beforehand, combined with a fear of complex, sluggish, or unresponsive exchange processes.
+* **Cheap Presentation:** Fear of receiving a product with lightweight, poorly constructed plastic caps, weak atomizers, or cheap glass that fails to look and feel premium on their personal vanity.
+
+---
+
+## 4. GENERAL GOALS
+
+* **Maintain Luxury Lifestyle:** To continue enjoying complex, master-tier international scent profiles without compromising due to tightening macroeconomic conditions.
+* **Project Status and Authority:** To leave a commanding, sophisticated physical impression in professional and social environments through an enduring personal scent trail.
+* **Scent Longevity:** To obtain absolute performance reliability, requiring a fragrance that lasts through a full 8 to 12-hour professional schedule or transitions seamlessly into evening engagements.
+* **Support Local Excellence:** To intentionally discover and champion premium, world-class Egyptian brands that confidently match or exceed the production quality of foreign legacy houses.
+
+---
+
+## 5. BEHAVIORAL TRIGGERS
+
+* **The Shark Tank Validation Effect:** Instant credibility and a surge in purchasing confidence triggered by the brand's verified public investment valuation, national exposure, and transparent supply chain details.
+* **High-Tactile Unboxing Content:** Consumer conversions driven by visual proof of heavy, industrial-grade frosted glass bottles and premium structural packaging boards.
+* **The Low-Barrier Discovery Trial:** High conversion rates triggered by a low-friction entry point, specifically an affordable, multi-scent sample kit that lets them evaluate performance risk-free before purchasing full-size bottles.
+* **Frictionless Re-ordering:** Rapid, automated checkout options when an existing favorite bottle runs low, requiring a direct path to replacement with minimal text exchanges.
+
+---
+
+## 6. SOCIAL PLATFORM AVAILABILITY
+
+* **Primary Interactive Channels:** Exceptionally active within Meta messaging application layers. They expect real-time, instantaneous, and highly polished communication on:
+* **WhatsApp Business:** Utilized for rapid order placement, direct customer support, and instant transactional confirmation.
+* **Instagram Direct:** Utilized for initial product discovery, browsing visually rich brand assets, and checking curated lifestyle catalogs.
+* **Facebook Messenger:** Utilized for secondary customer support loops and high-intent brand inquiries.
+
+
+* **Communication Standards:** Zero tolerance for broken checkout links, delayed response times, hidden pricing matrices, or ambiguous return policies.
+
+---
+
+## 7. GRANULAR CAREER & PERFORMANCE SEGMENTATION
+
+### 7.1 Segment Alpha: The Corporate Nomad
+
+* **Profile:** Investment banking associates, senior tech consultants, corporate legal advisors, and multinational directors operating in major commercial hubs.
+* **Core Requirements:** High-impact projection and extensive scent trail endurance. The fragrance formula must remain stable through long, client-facing hours, transitioning seamlessly from climate-controlled corporate offices to high-heat transit environments.
+
+### 7.2 Segment Beta: The Creative Class
+
+* **Profile:** Architects, interior design consultants, boutique fashion stylists, and agency creative directors.
+* **Core Requirements:** Extreme focus on structural geometry, weight, and minimalist packaging design. They completely avoid mass-market designer trends, actively seeking complex, rare ingredient pairings like deep patchouli, raw agarwood, and smoky leather resins to reinforce their personal design identity.
+
+### 7.3 Segment Gamma: The Digital Entrepreneur
+
+* **Profile:** Venture-backed startup founders, tech freelancers, cross-border e-commerce merchants, and digital growth marketers.
+* **Core Requirements:** Absolute digital-first convenience. They utilize low-friction discovery mechanics, such as a specialized curated trial box, to systematically verify raw olfactory longevity before investing in the flagship full-size collection.
+",idle,"The shipping cost to Cairo is a flat rate of *EGP 80.00*. Deliveries are completed within a strict window of *3 to 5 business days* following standard processing times of *1 to 2 business days*. 
+
+If you have any further inquiries or require assistance, please let me know."
+sc_2_tricky,gpt-4o-mini,"USER: I have 2000 EGP worth of items in my cart. Is there any way to save on shipping costs to Giza, or do I have to pay?",shipping cost Giza,"
+# NUIT FRAGRANCES: FAQ
+
+## 1. GEOGRAPHIC FULFILLMENT SCOPE & SHIPPING TIMELINES
+* **Query Intent Vector:** International shipping availability, local shipping scope, shipping durations, processing timelines.
+* **Domestic Fulfillment Architecture:** Nuit ships nationwide across all governorates within the Arab Republic of Egypt. Orders are dispatched from the central fulfillment facility via national tier-one logistics partners.
+  * *Domestic Transit Timeline:* Deliveries are completed within a strict window of **3 to 5 business days** following standard warehouse processing latency (1 to 2 business days).
+* **Global Fulfillment Architecture:** Nuit ships internationally to all globally serviceable destinations via verified express air courier frameworks.
+  * *International Transit Timeline:* Deliveries arrive at international destination borders within **7 to 14 business days** following custom customs clearancing protocols.
+
+## 2. STANDARD SHIPPING FEES & CAMPAIGN MOTIVATORS
+* **Query Intent Vector:** Shipping prices, hidden fees, free delivery requirements, international delivery rates.
+* **Domestic Delivery Cost Matrix:** Applied as a locked flat delivery charge of **EGP 80.00** nationwide across Egypt, independent of geographic distance or governorate tier.
+  * *Free Delivery Promotion:* The standard domestic shipping fee is systematically waived and dropped to **EGP 0.00** for any single customer checkout session that carries a net shopping cart value exceeding **EGP 1,500.00**.
+* **International Delivery Cost Matrix:** Applied as a locked flat express air cargo fee of **EGP 650.00** across all international destination territories.
+
+## 3. CORE RETURN & EXCHANGE CLAUSES (OFFICIAL REFUND POLICY PATHS)
+* **Can I return a fragrance if I don't like the smell or change my mind?**
+  * *System Response Framework:* No. To maintain fairness, strict hygienic standards, and high quality control across batches, Nuit enforces a strict **defective or damaged products ONLY policy**. Returns, refunds, or variant exchanges for reasons unrelated to physical damage (such as change of mind, blind-buy dissatisfaction, or personal scent preference shifts) are **NOT permitted**.
+* **What is the absolute window to report an issue with an order?**
+  * *System Response Framework:* Customers must submit an explicit request via Instagram Direct or WhatsApp DM within a strict window of **14 calendar days** from the verified delivery date. Any requests sent after the 14-day window expires cannot be approved under any circumstances, regardless of the product type or issue.
+* **Can I return a full-size perfume bottle if I don't use it but a sample exists?**
+  * *System Response Framework:* No. If Nuit offers a purchasable sample format of a specific fragrance on the online store, the full-size version is entirely **ineligible** for exchange or refund. This binding constraint applies even if the sample format is temporarily marked out of stock or unavailable at the time of your request. Nuit strongly counsels clients to buy a sample first to validate personal preference.
+* **Can I return or exchange items purchased during a sale or promotion?**
+  * *System Response Framework:* No. Any products bought using discount codes, bundle offers, seasonal marketing promotions, special tiered pricing, or campaign markdowns are classified as **final sale** and are strictly ineligible for exchange or refund.
+* **Can I return Khamrias or Concentrated Perfume Oils?**
+  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all Khamrias and concentrated perfume oils (""Shots"") are completely non-refundable and non-exchangeable under any circumstances.
+* **Can I return a limited edition or special collaborative fragrance?**
+  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection (e.g., *Avec Hatshepsut - Nuit X Temraza*) is strictly non-returnable.
+
+## 4. LOGISTICS EXCEPTION HANDLING & DAMAGED ON ARRIVAL WORKFLOWS
+* **My bottle arrived leaking, broken, or defective. What is the resolution process?**
+  * *System Response Framework:* If an item arrives leaking, broken, or clearly defective due to transit handling or manufacturing errors, Nuit will provide an exchange or a refund depending entirely on live inventory availability. 
+  * *Required Action:* The customer must contact support via WhatsApp or Instagram DM within the **14-day window**, providing their order number, a brief description of the issue, and clear photographic or video assets showing the damage.
+  * *Assessment Note:* Minor leaks, faint scuffs, or superficial packaging marks may naturally occur during transit or due to temperature variables and are not automatically considered grounds for a return. Nuit reserves the right to assess the media assets and determine eligibility.
+* **Are there any restocking fees or extra delivery costs for an approved damaged return?**
+  * *System Response Framework:* There are **no extra fees** or processing charges applied to approved returns or exchanges due to verified manufacturing defects or transit damage. However, original baseline shipping fees paid during the initial checkout sequence are entirely non-refundable.
+* **How long does it take to receive a money refund if approved?**
+  * *System Response Framework:* Once an eligible item is received back at the central facility and passes physical inspection, refunds are processed and sent back to the original method of payment within **14 business days**.
+",idle,"The standard shipping fee to Giza is a flat rate of *EGP 80.00*. However, since your cart value is *EGP 2,000.00*, you qualify for our free delivery promotion, which waives the shipping fee entirely. 
+
+If you have any further questions or need assistance, please let me know."
+sc_3_direct,gpt-4o-mini,USER: Where can I buy stocks of Nuit Fragrances?,buy stocks,"
+# NUIT FRAGRANCES: PRODUCTS, LOGISTICS & TRANSACTIONAL POLICIES REFERENCE MANUAL
+# Document Control ID: NUIT-KB-01B-2026 | Data Classification: Internal Context Asset
+# Ground Truth Source: Official Nuit Fragrances Terms and Conditions & Refund Policies
+
+## 1. PRODUCT CATALOG & PRICING MATRIX
+The following ledger represents the absolute ground-truth matrix for active products, exact sizing, olfactory note architectures, and structural pricing tiers within the retrieval database:
+
+### 1.1 Flagship Eau de Parfum (EDP) Collection
+* **Physical Specifications:** 50ml Heavyweight Bespoke Glass Flacons. High essential oil persistence profiles.
+* **Standard Base MSRP:** EGP 855.00 (All taxes inclusive).
+* **Standard Active Campaign / Promotional Price Tier:** EGP 599.00 (All taxes inclusive).
+* **Active Fragrance Variants & Scent Ledger:**
+  * `Rum`: A warm, spicy, and highly persistent oriental unisex formulation. Features note layers of rich chocolate, authentic sweet date accords, sharp cinnamon, warm amber, and heavy tonka bean.
+  * `Dulce de Leche`: A rich, highly indulgent, sweet gourmand-tier olfactory profile mimicking caramelized milk and sweet vanilla depths.
+  * `Head Turner`: A signature, highly projecting clean-fresh scent configuration engineered for extreme sillage and high physical longevity.
+  * `Born in Milano`: A premium, contemporary urban fresh-aromatic blend combining classic Italian citrus top notes with modern clean woods.
+  * `Born in Vegas`: A bold, modern nocturnal woody blend with rich resinous base notes designed for evening wear.
+  * `Bounty Hunter`: A powerful, highly assertive masculine/unisex leather-woody accord featuring rugged smoke and dark wood elements.
+  * `Red Flag`: A highly specialized, avant-garde contemporary conceptual scent profile crafted for niche fragrance enthusiasts.
+  * `Green Flag`: A bright, crisp, highly energetic contemporary blend utilizing clean herbaceous elements and vibrant citrus oils.
+  * `Espresso Martini`, `Forbidden Fruit`, `Casa Di Rosa`, `Lindo Día`, `Monroe`, `Warm Vanilla`, `French Foulard`, `True Hipster`, `Leather Jacket`, `Cappuccina`, `Choco Frappe`, `Hazelwood`, `Heritage`, `I am Harvey`
+
+### 1.2 Luxury Collaboration & Specialty Series
+* `Avec Hatshepsut - Nuit X Temraza`: An ultra-premium, high-concept luxury haute design crossover variant developed in collaboration with the renowned fashion house Temraza. Housed in a completely exclusive art flacon.
+  * **Retail MSRP:** EGP 1,950.00 (Fixed pricing tier; strictly excluded from standard EDP campaign discounts).
+
+### 1.3 Concentrated Perfume Products (""Shots"") & Khamrias
+* **Physical Specifications:** Pocket-sized high-concentration delivery systems containing pure raw essential perfume oils and traditional hair/skin formulation blends (Khamrias). Designed for direct, highly localized application to primary bodily pulse points.
+  * **Retail MSRP:** EGP 475.00 base pricing. Examples: *Vanilla Shot*, *Born in Milano Shot*, *Caramel Shot*, *Head Turner Shot*.
+
+### 1.4 Premium Body Splash & Personal Care Mists
+* **Physical Specifications:** Lightweight, fine-mist delivery sprays engineered to be entirely skin-safe and safe for delicate premium textile/fabric application.
+  * **Retail MSRP:** EGP 315.00 base pricing. Examples: *Soft Cloud Heart*, *Very Delicate Vanilla*, *The Harvey Splash*.
+
+## 2. SUPPLY CHAIN LOGISTICS, TIMELINES & SHIPPING TIERS
+* **Geographic Fulfillment Limitation:** Nuit focuses operations strictly within the domestic Egyptian market. The brand does **not** process, fulfill, or ship orders internationally outside of Egypt.
+* **In-House Processing Latency:** Orders require a baseline window of 1 to 2 business days for automated inventory picking, secondary quality control inspection, secure product heat-sealing, and digital logistics manifest generation.
+* **Domestic Logistics Delivery Duration:** Deliveries are executed within a strict 3 to 5 business days transit window across national shipping partners.
+* **Bound Flat Shipping Fee:** EGP 80.00 flat across all Egyptian Governorates, without geographic exception.
+* **Free Shipping Incentive Threshold:** Automatically and systematically triggered on any single checkout session carrying a net shopping cart value exceeding EGP 1,500.00.
+
+## 3. STRICT EXCHANGE & REFUND POLICY (OFFICIAL WEBSITE STANDARD)
+To maintain strict fairness, hygienic standards, and high cosmetic quality thresholds across batches, the brand enforces unyielding parameters regarding transaction reversals.
+
+### 3.1 Defective or Damaged Products ONLY Mandate
+* Returns or exchanges for reasons unrelated to physical manufacturing damage or shipping defects (such as a change of mind, personal blind-buy dissatisfaction, or scent preference shifts) are **NOT permitted** under any circumstances. Scent is highly personal, and things don't always go as planned. Customers are explicitly invited to message the care team over Instagram or WhatsApp DM to discuss notes and get support *before* placing an order if they are unsure about a scent.
+
+### 3.2 The 14-Day Strict Reporting Window
+* Customers possess an absolute timeline of **14 calendar days** from the verified timestamp of receiving the item to submit an eligible return or exchange request. Any request transmitted after this 14-day window expires will be automatically rejected without exception, even if the product contains a verified physical defect.
+
+### 3.3 Absolute Disqualification Parameters (Strictly Non-Refundable & Non-Exchangeable)
+The following product classes and purchase states are barred from return, exchange, or financial remediation tracks under any circumstances:
+* **Products with Samples Available:** If Nuit offers a purchasable trial sample format of a specific fragrance on the store, the full-size version is entirely ineligible for exchange or refund. This restriction remains binding even if the sample format is temporarily out of stock or unavailable at the time of the request. Nuit strongly recommends purchasing a sample first to ensure the scent matches personal preferences before buying full-sized products.
+* **Discounted & Campaign Items:** Products purchased utilizing any discount codes, bundle offers, seasonal promotions, flash sales, vouchers, or any form of special tiered pricing are classified as final sale and are strictly ineligible for exchange or refund.
+* **Seasonal or Limited Edition Products:** Any item labeled or marketed as seasonal, limited edition, archive stock, or part of a special collection/collaborative drop (e.g., *Avec Hatshepsut*) is non-returnable and non-exchangeable.
+* **Khamrias & Perfume Oils:** For strict hygienic, sanitary, and public health safety reasons, all Khamrias and concentrated perfume oils (""Shots"") are completely non-refundable and non-exchangeable.
+
+### 3.4 Verified Damaged or Defective Item Subroutine
+* **Eligible Criteria:** Product arrives clearly damaged due to manufacturing errors or shipping transit, such as major fluid leakage, broken glass flacons, or complete structural atomizer pump failures.
+* **Minor Variations Note:** Minor leaks, faint scuffs, or cosmetic packaging imperfections may naturally occur due to temperature fluctuations or carrier handling during transit and are not always considered valid grounds for a return. Nuit reserves the right to assess the situation and determine absolute eligibility.
+* **Verification Assets & Process:** The customer must contact support via Instagram Direct or WhatsApp DM within the mandatory 14-day window. The customer must provide their system order number alongside a brief description and clear photos and/or videos documenting the explicit issue.
+
+### 3.5 Fees & Financial Resolutions
+* **Approved Return Processing Fees:** If an exchange or refund is formally approved due to verified product damage or manufacturing defects, there are **no extra fees** or restocking charges applied to the customer. Nuit handles the fulfillment correction entirely at zero added fee.
+* **Shipping Fee Non-Refundability:** Original baseline shipping fees paid by the client during the initial checkout sequence are entirely non-refundable.
+* **Refund Processing Latency:** Approved monetary refunds are systematically processed via the original method of payment within **14 business days** after the central fulfillment facility receives, inspects, and validates the physical state of the returned item.
+",no_info_found,"I apologize, but I am unable to locate the details regarding stock purchasing in my records. I will transfer you to a human specialist."
+sc_3_tricky,gpt-4o-mini,USER: Do you sell the Nuit Signature in a solid wax cologne format?,solid wax cologne Nuit Signature,"
+# NUIT FRAGRANCES: GRANULAR PRODUCT SPECIFICATIONS & OLFACtORY ARCHITECTURE LEDGER
+
+## 1. NUIT SIGNATURE EAU DE PARFUM (SKU-001) TECHNICAL SPECIFICATIONS
+* **Olfactory Classification:** Woody Spicy Oriental (Unisex Formulation).
+* **Chemical Concentration Architecture:** Formulated with a strict 20% pure essential oil volume concentration, hitting the elite tier of the Eau de Parfum (EDP) classification. Meticulously stabilized to deliver a verified, authentic **6 to 8-hour longevity profile** with high sillage and continuous performance.
+* **Hardware & Bottle Profile:** Housed in a custom-molded, 100ml structural frosted Midnight Onyx glass bottle. Features a high-atomization, professional-grade black pump and delivery mechanism engineered for a wide, ultra-fine mist distribution.
+* **Retail Pricing Node:** **EGP 1,850.00** (All standard domestic taxes inclusive).
+
+### 1.1 Granular Scent Architecture & Note Breakdown
+* **Top Notes (Immediate Sensory Volatility / 0-15 Minutes):** Crushed organic black pepper, aromatic organic cardamom pods, and cold-pressed Italian bergamot peel.
+* **Heart Notes (Core Scent Identity / 15 Minutes - 4 Hours):** Aged Moroccan cedarwood, dark damp Indonesian patchouli leaves, and night-blooming indigenous Egyptian jasmine.
+* **Base Notes (Structural Fixatives & Dry-Down / 4-8+ Hours):** Premium agarwood (fractionated oud distillates), dark golden amber resins, creamy Indian sandalwood, and a soft velvet musk compound.
+
+### 1.2 Retail & Usage Directives
+* **Application Protocols:** Direct the formulation onto high-blood-circulation pulse points, including the interior wrists, the lateral sides of the neck, and behind the ears. 
+* **Material Restrictions:** While completely safe for human skin, direct close-range spraying is prohibited on light, delicate fabrics such as natural silk or satin to prevent surface oil spotting.
+
+---
+
+## 2. NUIT AMBER HOME MIST (SKU-002) TECHNICAL SPECIFICATIONS
+* **Olfactory Classification:** Warm Ambient Amber Musk (Textile-Safe Room Formulation).
+* **Chemical Concentration Architecture:** Formulated with an 8% industrial-grade premium fragrance oil concentration suspended in a completely water-soluble, non-staining fluid base. Engineered for rapid room distribution and long-lasting ambient indoor persistence.
+* **Hardware & Bottle Profile:** Housed in a 250ml heavy amber protective glass container equipped with a high-output, ergonomic trigger-lock spray mechanism to prevent accidental leakage.
+* **Retail Pricing Node:** **EGP 950.00** (All standard domestic taxes inclusive).
+
+### 2.1 Granular Scent Architecture & Note Breakdown
+* **Top Notes (Immediate Sensory Volatility):** Sweet Mediterranean orange blossom extracts and cracked pungent white pepper.
+* **Heart Notes (Core Ambient Identity):** Pure Madagascar vanilla bean extract, crushed Ceylon cinnamon bark, and sticky dark labdanum resin.
+* **Base Notes (Ambient Longevity & Dry-Down):** Warm fossilized amber accords, dark aromatic patchouli, and clean, intense white musk fixatives.
+
+### 2.2 Fabric Safety & Environmental Parameters
+* **Authorized Material Contact Surfaces:** Fully certified as non-staining and entirely safe for application across high-density home furnishings, interior textiles, and drapery, including woven linen, heavy velvet, combed cotton, and natural wool.
+* **Strict Material Restrictions:** Do not spray directly onto real natural suede, untreated raw leathers, or highly polished premium wood surfaces.
+
+---
+
+## 3. MANUFACTURING STANDARDS & QUALITY RIGOR
+* **Cross-Border Sourcing Pipeline:** All underlying raw essential oils, structural fragrance compounds, and aromatic molecules are sourced, harvested, and chemically processed in Grasse, France. 
+* **Domestic Finishing Protocol:** Final product batching, professional compounding, precise alcohol dilution, maceration, and structural chilling/filtration are completed locally by master compounding experts in Cairo, Egypt.
+* **Ethical & Chemical Certifications:** All formulations in the production line are officially certified as 100% cruelty-free, paraben-free, and phthalate-free, strictly meeting international cosmetic safety guidelines.
+",no_info_found,"I apologize, but I am unable to locate the details regarding the availability of Nuit Signature in a solid wax cologne format in my records. I will transfer you to a human specialist."
+sc_4_direct,gpt-4o-mini,"USER: How long does shipping to France take?
+ASSISTANT: Shipping to France takes 7 to 14 business days.
+USER: Can I return a sale item?",return policy sale items,"
+# NUIT FRAGRANCES: FAQ
+
+## 1. GEOGRAPHIC FULFILLMENT SCOPE & SHIPPING TIMELINES
+* **Query Intent Vector:** International shipping availability, local shipping scope, shipping durations, processing timelines.
+* **Domestic Fulfillment Architecture:** Nuit ships nationwide across all governorates within the Arab Republic of Egypt. Orders are dispatched from the central fulfillment facility via national tier-one logistics partners.
+  * *Domestic Transit Timeline:* Deliveries are completed within a strict window of **3 to 5 business days** following standard warehouse processing latency (1 to 2 business days).
+* **Global Fulfillment Architecture:** Nuit ships internationally to all globally serviceable destinations via verified express air courier frameworks.
+  * *International Transit Timeline:* Deliveries arrive at international destination borders within **7 to 14 business days** following custom customs clearancing protocols.
+
+## 2. STANDARD SHIPPING FEES & CAMPAIGN MOTIVATORS
+* **Query Intent Vector:** Shipping prices, hidden fees, free delivery requirements, international delivery rates.
+* **Domestic Delivery Cost Matrix:** Applied as a locked flat delivery charge of **EGP 80.00** nationwide across Egypt, independent of geographic distance or governorate tier.
+  * *Free Delivery Promotion:* The standard domestic shipping fee is systematically waived and dropped to **EGP 0.00** for any single customer checkout session that carries a net shopping cart value exceeding **EGP 1,500.00**.
+* **International Delivery Cost Matrix:** Applied as a locked flat express air cargo fee of **EGP 650.00** across all international destination territories.
+
+## 3. CORE RETURN & EXCHANGE CLAUSES (OFFICIAL REFUND POLICY PATHS)
+* **Can I return a fragrance if I don't like the smell or change my mind?**
+  * *System Response Framework:* No. To maintain fairness, strict hygienic standards, and high quality control across batches, Nuit enforces a strict **defective or damaged products ONLY policy**. Returns, refunds, or variant exchanges for reasons unrelated to physical damage (such as change of mind, blind-buy dissatisfaction, or personal scent preference shifts) are **NOT permitted**.
+* **What is the absolute window to report an issue with an order?**
+  * *System Response Framework:* Customers must submit an explicit request via Instagram Direct or WhatsApp DM within a strict window of **14 calendar days** from the verified delivery date. Any requests sent after the 14-day window expires cannot be approved under any circumstances, regardless of the product type or issue.
+* **Can I return a full-size perfume bottle if I don't use it but a sample exists?**
+  * *System Response Framework:* No. If Nuit offers a purchasable sample format of a specific fragrance on the online store, the full-size version is entirely **ineligible** for exchange or refund. This binding constraint applies even if the sample format is temporarily marked out of stock or unavailable at the time of your request. Nuit strongly counsels clients to buy a sample first to validate personal preference.
+* **Can I return or exchange items purchased during a sale or promotion?**
+  * *System Response Framework:* No. Any products bought using discount codes, bundle offers, seasonal marketing promotions, special tiered pricing, or campaign markdowns are classified as **final sale** and are strictly ineligible for exchange or refund.
+* **Can I return Khamrias or Concentrated Perfume Oils?**
+  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all Khamrias and concentrated perfume oils (""Shots"") are completely non-refundable and non-exchangeable under any circumstances.
+* **Can I return a limited edition or special collaborative fragrance?**
+  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection (e.g., *Avec Hatshepsut - Nuit X Temraza*) is strictly non-returnable.
+
+## 4. LOGISTICS EXCEPTION HANDLING & DAMAGED ON ARRIVAL WORKFLOWS
+* **My bottle arrived leaking, broken, or defective. What is the resolution process?**
+  * *System Response Framework:* If an item arrives leaking, broken, or clearly defective due to transit handling or manufacturing errors, Nuit will provide an exchange or a refund depending entirely on live inventory availability. 
+  * *Required Action:* The customer must contact support via WhatsApp or Instagram DM within the **14-day window**, providing their order number, a brief description of the issue, and clear photographic or video assets showing the damage.
+  * *Assessment Note:* Minor leaks, faint scuffs, or superficial packaging marks may naturally occur during transit or due to temperature variables and are not automatically considered grounds for a return. Nuit reserves the right to assess the media assets and determine eligibility.
+* **Are there any restocking fees or extra delivery costs for an approved damaged return?**
+  * *System Response Framework:* There are **no extra fees** or processing charges applied to approved returns or exchanges due to verified manufacturing defects or transit damage. However, original baseline shipping fees paid during the initial checkout sequence are entirely non-refundable.
+* **How long does it take to receive a money refund if approved?**
+  * *System Response Framework:* Once an eligible item is received back at the central facility and passes physical inspection, refunds are processed and sent back to the original method of payment within **14 business days**.
+",idle,"Unfortunately, items purchased during a sale or promotion are classified as *final sale* and are strictly ineligible for exchange or refund. If you have any further questions or need assistance, please let me know."
+sc_4_tricky,gpt-4o-mini,"USER: My bottle arrived leaking and damaged. Can you help?
+ASSISTANT: I am so sorry to hear that. We will happily send you a free replacement bottle for the transit damage.
+USER: Can I return it to get the vanilla scent instead?",,,failed,"ERROR: Execution failed: Error code: 429 - {'error': {'code': 'RateLimitReached', 'message': 'Rate limit of 15 per 60s exceeded for UserByModelByMinute. Please wait 0 seconds before retrying.', 'details': 'Rate limit of 15 per 60s exceeded for UserByModelByMinute. Please wait 0 seconds before retrying.'}}"

@@ -43,20 +43,11 @@ def convert_to_langchain_messages(chat_history):
 def make_test_graph(qa_node, loader):
     workflow = StateGraph(AgentState)
     
-    # Mock / RAG Node
-    def mock_and_rag_node(state: AgentState) -> dict:
-        # 1. Retrieve query from messages history
-        messages = state.get("messages", [])
-        user_input = messages[-1].content
-                
-        # 2. Append actual RAG of the system to get the relevant data
-        rag_output = loader.retrieve_context(user_input) if user_input else ""
+    # Mock Node
+    def mock_node(state: AgentState) -> dict:
+        return {}
         
-        return {
-            "rag_output": rag_output
-        }
-        
-    workflow.add_node("mock_and_rag", mock_and_rag_node)
+    workflow.add_node("mock_and_rag", mock_node)
     workflow.add_node("qa", qa_node)
     
     workflow.set_entry_point("mock_and_rag")
@@ -105,7 +96,7 @@ def setup_environment() -> dict:
         api_key=api_key,
         base_url=base_url,
         model=model_name,
-        temperature=0.0,
+        temperature=0.3,
         max_retries=1
     )
     
@@ -174,7 +165,8 @@ def main():
                 status_code=scenario.get("react_status_code", "not_triggered")
             ),
             "process_state": "idle",
-            "rag_output": ""
+            "rag_output": "",
+            "agent_queries": ""
         }
         
         # Invoke Graph
@@ -207,6 +199,7 @@ def main():
             "ID": scenario_id,
             "Model": model_name,
             "Chat_History": history_text,
+            "Agent_Queries": final_state.get("agent_queries", "") if final_state else "",
             "RAG_Context": final_state.get("rag_output", "") if final_state else "",
             "Final_Process_State": final_process_state,
             "Agent_Output": agent_output,
