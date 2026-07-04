@@ -157,16 +157,22 @@ class NuitBot:
 
         config = {"configurable": {"thread_id": thread_id}}
 
+        # Preserve learned_user_info from previous turns
+        existing_state = self.graph.get_state(config).values
+        learned_info = existing_state.get("learned_user_info", {}) if existing_state else {}
+
         inputs = {
             "messages": [HumanMessage(content=message)],
+            # Reset turn-specific state
             "router_output": None,
             "qa_directive": "answer",
             "react_request": None,
             "react_result": None,
             "escalation_report": None,
-            "learned_user_info": {},
             "react_turn_count": 0,
             "final_response": "",
+            # Preserve across turns
+            "learned_user_info": learned_info,
         }
 
         # Run the graph

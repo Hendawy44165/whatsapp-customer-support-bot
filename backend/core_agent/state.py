@@ -79,6 +79,35 @@ class EscalationReport(BaseModel):
     )
 
 
+
+class ExtractedUserInfo(BaseModel):
+    """Structured output from the CRM extraction LLM call."""
+    name: str | None = Field(
+        default=None,
+        description="Customer's name if mentioned in the conversation.",
+    )
+    phone: str | None = Field(
+        default=None,
+        description="Customer's phone number if mentioned.",
+    )
+    delivery_zone: str | None = Field(
+        default=None,
+        description="Customer's delivery governorate/area if mentioned.",
+    )
+    order_ids: list[str] = Field(
+        default_factory=list,
+        description="Any order IDs the customer mentioned.",
+    )
+    product_preferences: list[str] = Field(
+        default_factory=list,
+        description="Fragrance names or product types the customer showed interest in.",
+    )
+    has_new_info: bool = Field(
+        default=False,
+        description="True if ANY of the above fields contain real new information from this conversation.",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Graph State
 # ---------------------------------------------------------------------------
