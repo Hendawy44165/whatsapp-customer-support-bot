@@ -3,7 +3,7 @@
 ## 1. Overview
 This bot helps the user with their online journey on the Nuit Fragrances brand from answering their queries to doing complex tasks like handling their CRM and tracking their shipping and recommending products based on their preferences and past purchases.
 
-## 2. QA PRD
+## 2. QA Agent PRD
 ### What it does
 * Brand Voice 
 * Answer Inquires related to policies and FAQ

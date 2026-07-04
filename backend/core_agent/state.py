@@ -1,32 +1,110 @@
-from typing import Annotated, List, Dict, Literal
+"""
+AgentState and Pydantic structured output models for the Nuit Bot v2 graph.
+"""
+
+from typing import Annotated, Literal
 from typing_extensions import TypedDict
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
+from pydantic import BaseModel, Field
 
-class RouterDecision(TypedDict):
-    next_agent: Literal["qa", "react", "escalate"]
-    emotion : str
-    classification : Literal["WISMO", "Return", "Exchange", "Billing", "General Inquery", "Other"]
 
-class EscalationReport(TypedDict):
-    report : str
-    customer_emotion : Literal["anger", "joy", "sadness", "fear", "surprise", "disgust", "neutral", "frustration"]
-    urgency : Literal["low", "medium", "high", "critical"]
-    customer_name : str
-    customer_age : int
+# ---------------------------------------------------------------------------
+# Structured Outputs (Pydantic) — used with model.with_structured_output()
+# ---------------------------------------------------------------------------
 
-class ReactState(TypedDict):
-    missing_customer_data : List[str]
-    query_rationale : str
-    output : dict
-    status_code : Literal["success", "incomplete_input", "failure", "not_triggered"]
+class RouterOutput(BaseModel):
+    """Structured output from the Router agent."""
+    next_agent: Literal["qa", "escalate", "block"] = Field(
+        description="Which agent should handle this message."
+    )
+    sentiment: Literal["neutral", "positive", "frustrated", "angry"] = Field(
+        description="Detected user sentiment."
+    )
+    classification: Literal[
+        "general_inquiry", "order_tracking", "return_exchange",
+        "product_question", "billing", "unrelated", "greeting"
+    ] = Field(
+        description="Intent classification of the user message."
+    )
+    reasoning: str = Field(
+        description="Brief explanation of the routing decision for tracing."
+    )
+
+
+class ReactResult(BaseModel):
+    """Structured output from the ReAct agent back to the QA agent."""
+    status: Literal["success", "need_info", "failed"] = Field(
+        description="Outcome of the ReAct agent's execution."
+    )
+    tool_output: dict | None = Field(
+        default=None,
+        description="Raw CRM tool result if status is success."
+    )
+    missing_params: list[str] | None = Field(
+        default=None,
+        description="Parameters still needed from the user."
+    )
+    reasoning: str = Field(
+        description="Step-by-step reasoning plan for LangSmith tracing."
+    )
+    failure_reason: str | None = Field(
+        default=None,
+        description="Why the operation failed, if applicable."
+    )
+
+
+class EscalationReport(BaseModel):
+    """Structured output from the Human Escalation agent."""
+    reason: Literal[
+        "customer_anger", "react_failure", "direct_request",
+        "user_stalling", "repeated_failure"
+    ] = Field(
+        description="Why the conversation is being escalated."
+    )
+    chat_summary: str = Field(
+        description="1-2 sentence recap of the conversation."
+    )
+    urgency: float = Field(
+        ge=0.0, le=1.0,
+        description="Urgency score from 0.0 (low) to 1.0 (critical)."
+    )
+    collected_metadata: dict = Field(
+        default_factory=dict,
+        description="Any user info collected: phone, order_id, name, etc."
+    )
+    recommended_actions: list[str] = Field(
+        default_factory=list,
+        description="Suggested next steps for the human agent."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Graph State
+# ---------------------------------------------------------------------------
 
 class AgentState(TypedDict):
-    messages: Annotated[List[BaseMessage], add_messages]  # Pure User-Agent Chat History
-    process_state: str                                    # "idle" | "collecting" | "completed" | "failed" | "no_info_found"
-    learned_user_info : dict
-    router_decision : RouterDecision
-    escalation_report : EscalationReport
-    react_state : ReactState
-    rag_output : str
-    agent_queries : str
+    """Shared state passed through all nodes in the LangGraph."""
+
+    # Conversation history — auto-merged via add_messages reducer
+    messages: Annotated[list[BaseMessage], add_messages]
+
+    # Router output
+    router_output: RouterOutput | None
+
+    # QA <-> ReAct coordination
+    qa_directive: str   # "answer" | "delegate_to_react" | "present_results" | "ask_for_params" | "escalate"
+    react_request: str | None        # what QA wants ReAct to do
+    react_result: ReactResult | None
+
+    # Escalation
+    escalation_report: EscalationReport | None
+
+    # CRM auto-update tracking
+    learned_user_info: dict   # {name, phone, zone, preferences...}
+
+    # Guardrails
+    react_turn_count: int     # max 3 per user turn
+
+    # Final output
+    final_response: str       # the WhatsApp-formatted message to send to the user

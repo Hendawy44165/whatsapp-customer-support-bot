@@ -1,137 +1,136 @@
+"""
+QA agent node — handles FAQ, policy questions, and presents ReAct results.
+Uses hardcoded knowledge in the system prompt (no RAG).
+"""
+
+import re
 from typing import Dict
-from langchain_core.messages import SystemMessage, ToolMessage
-from pydantic import BaseModel
-from .base import BaseNode
+from langchain_core.messages import SystemMessage, AIMessage
+from langsmith import traceable
+
 from ..state import AgentState
+from ..config import get_model, load_prompt
 
-class QAAgentNode(BaseNode):
-    """
-    Formulates a luxury brand-voice response for the customer.
-    Follows WhatsApp formatting constraints and grounds output in RAG/CRM context.
-    """
-    def __call__(self, state: AgentState) -> Dict:
-        system_prompt = self.agent.loader.load_prompt("qa_agent.md")
-        
-        rag_context = state.get("rag_output")
-        learned_user_info = state.get("learned_user_info")
-        router_decision = state.get("router_decision")
-        react_state = state.get("react_state")
-        emotion = router_decision.get("emotion") 
-        classification = router_decision.get("classification")
-        
-        state_context_lines = []
-        if rag_context:
-            state_context_lines.append(f"RAG Context: {rag_context}")
-        if learned_user_info:
-            state_context_lines.append(f"Learned User Info: {learned_user_info}")
 
-        if emotion:
-            state_context_lines.append(f"Detected Emotion: {emotion}")
+def _build_context_section(state: AgentState) -> str:
+    """Build the dynamic context section injected after the system prompt."""
+    lines = []
+
+    # Router context
+    router_output = state.get("router_output")
+    if router_output:
+        sentiment = router_output.sentiment if hasattr(router_output, "sentiment") else router_output.get("sentiment")
+        classification = router_output.classification if hasattr(router_output, "classification") else router_output.get("classification")
+        if sentiment:
+            lines.append(f"User Sentiment: {sentiment}")
         if classification:
-            state_context_lines.append(f"Message Classification: {classification}")
-            
-        if react_state:
-            status_code = react_state.get("status_code", "not_triggered")
-            if status_code and status_code != "failure":
-                state_context_lines.append(f"React Status Code: {status_code}")
-                
-                if status_code == "success":
-                    output = react_state.get("output")
-                    if output:
-                        state_context_lines.append(f"React Output: {output}")
-                elif status_code == "incomplete_input":
-                    missing_customer_data = react_state.get("missing_customer_data")
-                    if missing_customer_data:
-                        state_context_lines.append(f"Missing Customer Data: {missing_customer_data}")
-                    query_rationale = react_state.get("query_rationale")
-                    if query_rationale:
-                        state_context_lines.append(f"Query Rationale: {query_rationale}")
+            lines.append(f"Intent Classification: {classification}")
 
-        state_context = ""
-        if state_context_lines:
-            state_context = "#CONTEXT VARIABLES\n" + "".join(state_context_lines)
-            
-        # Prepare inputs
-        messages = [SystemMessage(content=system_prompt)]
-        if state_context:
-            messages.append(SystemMessage(content=state_context))
-            
-        # Include recent message history
-        history = state.get("messages", [])
-        messages.extend(history)
-        
-        # Define search tool
-        search_tool = {
-            "type": "function",
-            "function": {
-                "name": "retrieve_knowledge",
-                "description": (
-                    "Search Nuit Fragrances official policies, terms, FAQs, product specs, and brand guidelines. "
-                    "Use this tool to find information about shipping times, shipping fees, returns, exchanges, "
-                    "damaged items, product specs, and general brand FAQs."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query. Reformulate based on conversation history if necessary.",
-                        }
-                    },
-                    "required": ["query"],
-                },
-            }
-        }
-        
-        # Bind tool to model
-        model_with_tools = self.agent.model.bind_tools([search_tool])
-        
-        max_steps = 2
-        step = 0
-        rag_retrieved_contexts = []
-        rag_queries_made = []
-        active_messages = list(messages)
-        
-        while step < max_steps:
-            response = model_with_tools.invoke(active_messages)
-            
-            if not response.tool_calls:
-                break
-                
-            active_messages.append(response)
-            for tool_call in response.tool_calls:
-                if tool_call["name"] == "retrieve_knowledge":
-                    query = tool_call["args"].get("query")
-                    rag_queries_made.append(query)
-                    context = self.agent.loader.retrieve_context(query)
-                    if context:
-                        rag_retrieved_contexts.append(context)
-                        
-                    tool_msg = ToolMessage(
-                        content=context if context else "No relevant information found in knowledge base.",
-                        tool_call_id=tool_call["id"]
-                    )
-                    active_messages.append(tool_msg)
-            step += 1
-        else:
-            response = model_with_tools.invoke(active_messages)
-            
-        updates = { "messages": [response] }
-        
-        # Track the search queries generated by the agent
-        updates["agent_queries"] = ", ".join(rag_queries_made) if rag_queries_made else ""
-        
-        # If any context was retrieved, update the state's rag_output
-        if rag_retrieved_contexts:
-            updates["rag_output"] = "\n\n---\n\n".join(rag_retrieved_contexts)
-            
-        # Determine if the agent is transferring the user
-        transfer_keywords = ["transfer", "specialist", "representative", "human agent", "care team", "reconnect", "unable to locate"]
-        content_lower = response.content.lower() if response.content else ""
-        is_transferring = any(kw in content_lower for kw in transfer_keywords)
-            
-        combined_rag = rag_context or updates.get("rag_output", "")
-        if not combined_rag or not combined_rag.strip() or is_transferring:
-            updates["process_state"] = "no_info_found"
-            
-        return updates
+    # ReAct result context (if coming back from ReAct)
+    react_result = state.get("react_result")
+    if react_result:
+        status = react_result.status if hasattr(react_result, "status") else react_result.get("status")
+        if status:
+            lines.append(f"ReAct Agent Status: {status}")
+
+        if status == "success":
+            tool_output = react_result.tool_output if hasattr(react_result, "tool_output") else react_result.get("tool_output")
+            if tool_output:
+                lines.append(f"ReAct Tool Output: {tool_output}")
+
+        elif status == "need_info":
+            missing = react_result.missing_params if hasattr(react_result, "missing_params") else react_result.get("missing_params")
+            if missing:
+                lines.append(f"Missing Parameters Needed: {missing}")
+            reasoning = react_result.reasoning if hasattr(react_result, "reasoning") else react_result.get("reasoning")
+            if reasoning:
+                lines.append(f"ReAct Reasoning: {reasoning}")
+
+        elif status == "failed":
+            reason = react_result.failure_reason if hasattr(react_result, "failure_reason") else react_result.get("failure_reason")
+            if reason:
+                lines.append(f"ReAct Failure Reason: {reason}")
+
+    # Learned user info
+    user_info = state.get("learned_user_info", {})
+    if user_info:
+        lines.append(f"Known User Info: {user_info}")
+
+    if not lines:
+        return ""
+
+    return "\n\n#9. CONTEXT VARIABLES\n" + "\n".join(f"- {line}" for line in lines)
+
+
+def _parse_directive(response_text: str) -> tuple[str, str | None, str]:
+    """
+    Parse the directive and optional react_request from the response text.
+    Returns (directive, react_request, clean_response).
+    """
+    directive = "answer"
+    react_request = None
+    clean_text = response_text
+
+    # Extract directive
+    directive_match = re.search(r"\[DIRECTIVE:\s*(\w+)\]", response_text)
+    if directive_match:
+        directive = directive_match.group(1).strip()
+        clean_text = response_text[:directive_match.start()].strip()
+
+    # Extract react request
+    react_match = re.search(r"\[REACT_REQUEST:\s*(.+?)\]", response_text)
+    if react_match:
+        react_request = react_match.group(1).strip()
+        clean_text = clean_text[:react_match.start()].strip() if react_match.start() < len(clean_text) else clean_text
+
+    # Clean up any remaining bracket tags
+    clean_text = re.sub(r"\[DIRECTIVE:.*?\]", "", clean_text).strip()
+    clean_text = re.sub(r"\[REACT_REQUEST:.*?\]", "", clean_text).strip()
+
+    return directive, react_request, clean_text
+
+
+@traceable(name="qa_agent_node")
+def qa_agent_node(state: AgentState) -> Dict:
+    """
+    Generates a brand-voice response for the customer.
+    
+    Handles:
+    - Direct FAQ/policy answers (knowledge hardcoded in system prompt)
+    - Parameter collection for ReAct delegation
+    - Presenting ReAct tool results in brand voice
+    - Escalation when unable to resolve
+    """
+    model = get_model()
+    system_prompt = load_prompt("qa_agent.md")
+
+    # Append dynamic context
+    context_section = _build_context_section(state)
+    full_system_prompt = system_prompt + context_section
+
+    # Build message list: system prompt + full conversation history
+    messages = state.get("messages", [])
+    llm_messages = [SystemMessage(content=full_system_prompt)] + list(messages)
+
+    # Invoke LLM
+    response = model.invoke(llm_messages)
+    response_text = response.content or ""
+
+    # Parse directive and clean response
+    directive, react_request, clean_response = _parse_directive(response_text)
+
+    # Validate directive
+    valid_directives = {"answer", "delegate_to_react", "present_results", "ask_for_params", "escalate"}
+    if directive not in valid_directives:
+        directive = "answer"
+
+    updates = {
+        "messages": [AIMessage(content=clean_response)],
+        "qa_directive": directive,
+        "final_response": clean_response,
+    }
+
+    if react_request:
+        updates["react_request"] = react_request
+
+    return updates
