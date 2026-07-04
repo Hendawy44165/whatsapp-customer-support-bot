@@ -97,10 +97,11 @@ def qa_agent_node(state: AgentState) -> Dict:
     # Run tool invocation loop (max 2 steps)
     for _ in range(2):
         response = model_with_tools.invoke(active_messages)
+        # Always append response first so it is not discarded
+        active_messages.append(response)
         if not response.tool_calls:
             break
 
-        active_messages.append(response)
         for tool_call in response.tool_calls:
             if tool_call["name"] == "query_products":
                 tool_result_str = query_products.invoke(tool_call["args"])

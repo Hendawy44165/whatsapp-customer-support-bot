@@ -95,11 +95,39 @@ def react_agent_node(state: AgentState) -> Dict:
     else:
         max_steps = 10
 
-    # 2. Run execution tool-calling loop
+    # Determine if planning failed due to exception
+    planner_failed = reasoning.startswith("Planning failed:")
+
+    # 2. Early exit if parameters are missing (estimated is None or 0)
+    current_count = state.get("react_turn_count", 0) + 1
+    if (estimated is None or estimated == 0) and not planner_failed:
+        missing = _extract_missing_params(reasoning)
+        return {
+            "react_result": ReactResult(
+                status="need_info",
+                tool_output=None,
+                missing_params=missing,
+                reasoning=reasoning,
+                failure_reason=None,
+            ),
+            "react_turn_count": current_count,
+        }
+
+    # Inject the planning result to guide the execution loop
+    plan_message = SystemMessage(
+        content=(
+            f"Execution Plan:\n"
+            f"- Reasoning Plan: {reasoning}\n"
+            f"- Estimated Tool Steps: {estimated}\n"
+            f"Execute the above plan using the available tools."
+        )
+    )
+
+    # 3. Run execution tool-calling loop
     model_with_tools = model.bind_tools(REACT_TOOLS)
     tool_results = []
     reasoning_parts = [f"Plan: {reasoning}"]
-    active_messages = list(llm_messages)
+    active_messages = list(llm_messages) + [plan_message]
 
     for step in range(max_steps):
         response = model_with_tools.invoke(active_messages)
@@ -153,9 +181,6 @@ def react_agent_node(state: AgentState) -> Dict:
 
     # Compile reasoning
     compiled_reasoning = "\n".join(reasoning_parts) if reasoning_parts else "No reasoning output captured."
-
-    # Determine the ReactResult based on what happened
-    current_count = state.get("react_turn_count", 0) + 1
 
     if tool_results:
         # Tools were called — check outcomes

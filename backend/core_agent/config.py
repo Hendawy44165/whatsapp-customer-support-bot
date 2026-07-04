@@ -14,14 +14,26 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _PROMPTS_DIR = os.path.join(_HERE, "prompts")
 
 
-@lru_cache(maxsize=1)
-def get_model() -> ChatOpenAI:
-    """Get the shared LLM instance (singleton). Single model for now."""
+@lru_cache(maxsize=10)
+def _get_cached_model(api_key: str, base_url: str, model_name: str) -> ChatOpenAI:
+    """Helper to return a cached ChatOpenAI instance for specific credentials/model."""
     return ChatOpenAI(
-        api_key=os.getenv("PROVIDER_API_KEY"),
-        base_url=os.getenv("PROVIDER_BASE_URL", "https://models.github.ai/inference"),
-        model=os.getenv("PROVIDER_MODEL_NAME", "openai/gpt-4.1-mini"),
+        api_key=api_key,
+        base_url=base_url,
+        model=model_name,
     )
+
+
+def get_model() -> ChatOpenAI:
+    """Get the shared LLM instance, supporting dynamic model changes via environment variables."""
+    api_key = os.getenv("PROVIDER_API_KEY")
+    base_url = os.getenv("PROVIDER_BASE_URL", "https://models.github.ai/inference")
+    model_name = os.getenv("PROVIDER_MODEL_NAME", "openai/gpt-4.1-mini")
+    
+    if not api_key:
+        raise ValueError("PROVIDER_API_KEY environment variable is not set.")
+        
+    return _get_cached_model(api_key, base_url, model_name)
 
 
 def load_prompt(filename: str) -> str:
