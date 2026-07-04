@@ -1,16 +1,16 @@
 """
 QA agent node — handles FAQ, policy questions, and presents ReAct results.
-Uses hardcoded knowledge in the system prompt (no RAG).
+Uses hardcoded knowledge in the system prompt (no RAG) and a query_products tool.
 Coordinates bidirectionally with the ReAct agent.
 """
 
-import re
 from typing import Dict
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage, ToolMessage
 from langsmith import traceable
 
-from ..state import AgentState
+from ..state import AgentState, QAOutput
 from ..config import get_model, load_prompt
+from ..tools import query_products
 
 
 def _get_attr_or_key(obj, attr: str, default=None):
@@ -23,7 +23,9 @@ def _get_attr_or_key(obj, attr: str, default=None):
 
 
 def _build_context_section(state: AgentState) -> str:
-    """Build the dynamic context section injected after the system prompt."""
+    """Build the dynamic context section injected after the system prompt.
+    Only adds raw data context, with no python-side instructions or guiding text.
+    """
     lines = []
 
     # Router context
@@ -32,88 +34,38 @@ def _build_context_section(state: AgentState) -> str:
         sentiment = _get_attr_or_key(router_output, "sentiment")
         classification = _get_attr_or_key(router_output, "classification")
         if sentiment:
-            lines.append(f"User Sentiment: {sentiment}")
+            lines.append(f"sentiment: {sentiment}")
         if classification:
-            lines.append(f"Intent Classification: {classification}")
+            lines.append(f"classification: {classification}")
 
     # ReAct result context (if coming back from ReAct)
     react_result = state.get("react_result")
     if react_result:
         status = _get_attr_or_key(react_result, "status")
         if status:
-            lines.append(f"ReAct Agent Status: {status}")
+            lines.append(f"react_status: {status}")
 
-        if status == "success":
-            tool_output = _get_attr_or_key(react_result, "tool_output")
-            if tool_output:
-                lines.append(f"ReAct Tool Output: {tool_output}")
-            lines.append(
-                "INSTRUCTION: Present these results to the customer in brand voice. "
-                "Use the directive [DIRECTIVE: present_results]."
-            )
+        tool_output = _get_attr_or_key(react_result, "tool_output")
+        if tool_output:
+            lines.append(f"react_tool_output: {tool_output}")
 
-        elif status == "need_info":
-            missing = _get_attr_or_key(react_result, "missing_params")
-            if missing:
-                lines.append(f"Missing Parameters Needed From User: {missing}")
-            reasoning = _get_attr_or_key(react_result, "reasoning")
-            if reasoning:
-                lines.append(f"ReAct Reasoning: {reasoning}")
-            lines.append(
-                "INSTRUCTION: Ask the user politely for the missing information listed above. "
-                "Use the directive [DIRECTIVE: ask_for_params]."
-            )
+        missing = _get_attr_or_key(react_result, "missing_params")
+        if missing:
+            lines.append(f"react_missing_params: {missing}")
 
-        elif status == "failed":
-            reason = _get_attr_or_key(react_result, "failure_reason")
-            if reason:
-                lines.append(f"ReAct Failure Reason: {reason}")
-            tool_output = _get_attr_or_key(react_result, "tool_output")
-            if tool_output:
-                lines.append(f"ReAct Failed Tool Output: {tool_output}")
-            lines.append(
-                "INSTRUCTION: The operation failed. If the failure message contains useful info "
-                "(e.g. 'not eligible for return'), explain it to the user. "
-                "If the error is a system error, apologize and escalate. "
-                "Use [DIRECTIVE: answer] if you can explain the failure, "
-                "or [DIRECTIVE: escalate] if it requires human help."
-            )
+        reason = _get_attr_or_key(react_result, "failure_reason")
+        if reason:
+            lines.append(f"react_failure_reason: {reason}")
 
     # Learned user info
     user_info = state.get("learned_user_info", {})
     if user_info:
-        lines.append(f"Known User Info: {user_info}")
+        lines.append(f"learned_user_info: {user_info}")
 
     if not lines:
         return ""
 
-    return "\n\n# CONTEXT VARIABLES\n" + "\n".join(f"- {line}" for line in lines)
-
-
-def _parse_directive(response_text: str) -> tuple[str, str | None, str]:
-    """
-    Parse the directive and optional react_request from the response text.
-    Returns (directive, react_request, clean_response).
-    """
-    directive = "answer"
-    react_request = None
-
-    # Extract directive
-    directive_match = re.search(r"\[DIRECTIVE:\s*([\w_]+)\]", response_text)
-    if directive_match:
-        directive = directive_match.group(1).strip()
-
-    # Extract react request
-    react_match = re.search(r"\[REACT_REQUEST:\s*(.+?)\]", response_text)
-    if react_match:
-        react_request = react_match.group(1).strip()
-
-    # Clean all bracket tags from the user-facing response
-    clean_text = re.sub(r"\[DIRECTIVE:.*?\]", "", response_text)
-    clean_text = re.sub(r"\[REACT_REQUEST:.*?\]", "", clean_text)
-    clean_text = clean_text.strip()
-
-    return directive, react_request, clean_text
+    return "\n\n# CONTEXT VARIABLES\n" + "\n".join(f"{line}" for line in lines)
 
 
 @traceable(name="qa_agent_node")
@@ -123,6 +75,7 @@ def qa_agent_node(state: AgentState) -> Dict:
 
     Handles:
     - Direct FAQ/policy answers (knowledge hardcoded in system prompt)
+    - Querying product details via query_products tool
     - Parameter collection for ReAct delegation
     - Presenting ReAct tool results in brand voice
     - Escalation when unable to resolve
@@ -134,29 +87,40 @@ def qa_agent_node(state: AgentState) -> Dict:
     context_section = _build_context_section(state)
     full_system_prompt = system_prompt + context_section
 
-    # Build message list: system prompt + full conversation history
+    # Build initial message list
     messages = state.get("messages", [])
-    llm_messages = [SystemMessage(content=full_system_prompt)] + list(messages)
+    active_messages = [SystemMessage(content=full_system_prompt)] + list(messages)
 
-    # Invoke LLM
-    response = model.invoke(llm_messages)
-    response_text = response.content or ""
+    # 1. Bind query_products tool to model for any product information retrieval
+    model_with_tools = model.bind_tools([query_products])
 
-    # Parse directive and clean response
-    directive, react_request, clean_response = _parse_directive(response_text)
+    # Run tool invocation loop (max 2 steps)
+    for _ in range(2):
+        response = model_with_tools.invoke(active_messages)
+        if not response.tool_calls:
+            break
 
-    # Validate directive
-    valid_directives = {
-        "answer", "delegate_to_react", "present_results",
-        "ask_for_params", "escalate",
-    }
-    if directive not in valid_directives:
-        directive = "answer"
+        active_messages.append(response)
+        for tool_call in response.tool_calls:
+            if tool_call["name"] == "query_products":
+                tool_result_str = query_products.invoke(tool_call["args"])
+                active_messages.append(
+                    ToolMessage(content=tool_result_str, tool_call_id=tool_call["id"])
+                )
+
+    # 2. Get final structured output using the Pydantic QAOutput schema
+    structured_model = model.with_structured_output(QAOutput)
+    final_output = structured_model.invoke(active_messages)
+
+    # Extract final clean user-facing message and directive
+    clean_message = final_output.message.strip()
+    directive = final_output.qa_directive
+    react_request = final_output.react_request
 
     updates: Dict = {
-        "messages": [AIMessage(content=clean_response)],
+        "messages": [AIMessage(content=clean_message)],
         "qa_directive": directive,
-        "final_response": clean_response,
+        "final_response": clean_message,
     }
 
     if react_request:

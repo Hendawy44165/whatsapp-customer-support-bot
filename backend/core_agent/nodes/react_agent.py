@@ -6,6 +6,7 @@ Uses a reasoning-first approach: plan → check params → call tools → return
 import re
 import json
 from typing import Dict
+from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, ToolMessage
 from langsmith import traceable
 
@@ -17,6 +18,17 @@ from ..tools import lookup_order, register_return, register_exchange
 # Tools available to the ReAct agent
 REACT_TOOLS = [lookup_order, register_return, register_exchange]
 REACT_TOOLS_BY_NAME = {t.name: t for t in REACT_TOOLS}
+
+
+class ReactPlan(BaseModel):
+    """Initial execution plan for the ReAct agent."""
+    estimated_steps: int | None = Field(
+        default=None,
+        description="The estimated number of tool calls needed to complete the task. Set to null if parameters are missing."
+    )
+    reasoning_plan: str = Field(
+        description="Step-by-step plan describing which tools will be called and why."
+    )
 
 
 def _extract_missing_params(text: str) -> list[str]:
@@ -49,9 +61,10 @@ def react_agent_node(state: AgentState) -> Dict:
 
     Flow:
     1. Receives task from QA via react_request
-    2. Plans what tools to call
-    3. If params missing → returns need_info with missing_params
-    4. If params present → calls tool → returns success/failed with result
+    2. Plans what tools to call and estimates execution steps
+    3. Calculates dynamic max_steps (estimated_steps * 2, default to 10 if not decided)
+    4. If params missing → returns need_info with missing_params
+    5. If params present → calls tool → returns success/failed with result
     """
     model = get_model()
     system_prompt = load_prompt("react_agent.md")
@@ -66,13 +79,26 @@ def react_agent_node(state: AgentState) -> Dict:
     messages = state.get("messages", [])
     llm_messages = [SystemMessage(content=full_system)] + list(messages)
 
-    # Bind tools to model
-    model_with_tools = model.bind_tools(REACT_TOOLS)
+    # 1. Run structured planning call to estimate tool steps
+    planner_model = model.with_structured_output(ReactPlan)
+    try:
+        plan = planner_model.invoke(llm_messages)
+        estimated = plan.estimated_steps
+        reasoning = plan.reasoning_plan
+    except Exception as e:
+        estimated = None
+        reasoning = f"Planning failed: {str(e)}"
 
-    # Tool calling loop (max 3 steps to prevent runaway)
+    # Determine dynamic max execution steps
+    if estimated is not None and estimated > 0:
+        max_steps = estimated * 2
+    else:
+        max_steps = 10
+
+    # 2. Run execution tool-calling loop
+    model_with_tools = model.bind_tools(REACT_TOOLS)
     tool_results = []
-    reasoning_parts = []
-    max_steps = 3
+    reasoning_parts = [f"Plan: {reasoning}"]
     active_messages = list(llm_messages)
 
     for step in range(max_steps):
@@ -126,7 +152,7 @@ def react_agent_node(state: AgentState) -> Dict:
             )
 
     # Compile reasoning
-    reasoning = "\n".join(reasoning_parts) if reasoning_parts else "No reasoning output captured."
+    compiled_reasoning = "\n".join(reasoning_parts) if reasoning_parts else "No reasoning output captured."
 
     # Determine the ReactResult based on what happened
     current_count = state.get("react_turn_count", 0) + 1
@@ -143,7 +169,7 @@ def react_agent_node(state: AgentState) -> Dict:
                     status="success",
                     tool_output=successes[-1]["result"],
                     missing_params=None,
-                    reasoning=reasoning,
+                    reasoning=compiled_reasoning,
                     failure_reason=None,
                 ),
                 "react_turn_count": current_count,
@@ -158,20 +184,20 @@ def react_agent_node(state: AgentState) -> Dict:
                     status="failed",
                     tool_output=failures[-1]["result"] if failures else None,
                     missing_params=None,
-                    reasoning=reasoning,
+                    reasoning=compiled_reasoning,
                     failure_reason="; ".join(failure_messages),
                 ),
                 "react_turn_count": current_count,
             }
     else:
         # No tools called — agent needs more info from the user
-        missing = _extract_missing_params(reasoning)
+        missing = _extract_missing_params(compiled_reasoning)
         return {
             "react_result": ReactResult(
                 status="need_info",
                 tool_output=None,
                 missing_params=missing,
-                reasoning=reasoning,
+                reasoning=compiled_reasoning,
                 failure_reason=None,
             ),
             "react_turn_count": current_count,

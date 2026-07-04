@@ -108,6 +108,20 @@ class ExtractedUserInfo(BaseModel):
     )
 
 
+class QAOutput(BaseModel):
+    """Structured output from the QA Agent."""
+    message: str = Field(
+        description="The response message to the user, styled for WhatsApp directly. Do NOT include markdown headers."
+    )
+    qa_directive: Literal["answer", "delegate_to_react", "present_results", "ask_for_params", "escalate"] = Field(
+        description="Routing directive."
+    )
+    react_request: str | None = Field(
+        default=None,
+        description="The request description for the ReAct agent if delegating."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Graph State
 # ---------------------------------------------------------------------------

@@ -11,6 +11,71 @@ from langchain_core.tools import tool
 # Mock Data
 # ---------------------------------------------------------------------------
 
+PRODUCT_CATALOG = {
+    "flagship_edp_50ml": {
+        "name": "Flagship Eau de Parfum (EDP) — 50ml",
+        "standard_price": "EGP 855.00",
+        "promo_price": "EGP 599.00",
+        "variants": [
+            "Rum", "Dulce de Leche", "Head Turner", "Born in Milano",
+            "Born in Vegas", "Bounty Hunter", "Red Flag", "Green Flag",
+            "Espresso Martini", "Forbidden Fruit", "Casa Di Rosa", "Lindo Día",
+            "Monroe", "Warm Vanilla", "French Foulard", "True Hipster",
+            "Leather Jacket", "Cappuccina", "Choco Frappe", "Hazelwood",
+            "Heritage", "I am Harvey"
+        ]
+    },
+    "luxury_collaboration": {
+        "name": "Avec Hatshepsut (Nuit X Temraza)",
+        "price": "EGP 1,950.00",
+        "notes": "exclusive art flacon, NOT eligible for standard EDP discounts"
+    },
+    "perfume_oils_shots_khamrias": {
+        "name": "Concentrated Perfume Oils (Shots) & Khamrias",
+        "price": "EGP 475.00",
+        "examples": ["Vanilla Shot", "Born in Milano Shot", "Caramel Shot", "Head Turner Shot"]
+    },
+    "body_splash_mists": {
+        "name": "Body Splash & Mists",
+        "price": "EGP 315.00",
+        "examples": ["Soft Cloud Heart", "Very Delicate Vanilla", "The Harvey Splash"]
+    }
+}
+
+
+@tool
+def query_products(query: str = "") -> str:
+    """Query the product catalog for pricing, availability, and fragrance variants.
+
+    Args:
+        query: Optional keywords to filter products (e.g. 'Rum', 'splashes', 'price').
+
+    Returns:
+        JSON string containing the matched products and their details.
+    """
+    clean_query = str(query).strip().lower()
+    if not clean_query:
+        return json.dumps(PRODUCT_CATALOG)
+
+    matched = {}
+    for key, product in PRODUCT_CATALOG.items():
+        # Check in name, variants, examples
+        name_match = clean_query in product.get("name", "").lower()
+        variants_match = any(clean_query in v.lower() for v in product.get("variants", []))
+        examples_match = any(clean_query in e.lower() for e in product.get("examples", []))
+        
+        if name_match or variants_match or examples_match:
+            matched[key] = product
+
+    if not matched:
+        return json.dumps({
+            "status": "not_found",
+            "message": f"No products found matching '{query}'.",
+            "available_categories": list(PRODUCT_CATALOG.keys())
+        })
+
+    return json.dumps(matched)
+
 MOCK_ORDERS = {
     "3021": {
         "phone": "01023456789",
