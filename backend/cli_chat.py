@@ -18,7 +18,7 @@ if backend_dir not in sys.path:
 
 load_dotenv()
 
-from core_agent.graph import NuitBot
+from core_agent.nuit_bot import NuitBot
 
 
 def _format_state_summary(state: dict) -> str:
@@ -27,10 +27,18 @@ def _format_state_summary(state: dict) -> str:
 
     router = state.get("router_output")
     if router:
-        sentiment = getattr(router, "sentiment", None) or (router.get("sentiment") if isinstance(router, dict) else None)
-        classification = getattr(router, "classification", None) or (router.get("classification") if isinstance(router, dict) else None)
-        next_agent = getattr(router, "next_agent", None) or (router.get("next_agent") if isinstance(router, dict) else None)
-        parts.append(f"Route: {next_agent} | Sentiment: {sentiment} | Intent: {classification}")
+        sentiment = getattr(router, "sentiment", None) or (
+            router.get("sentiment") if isinstance(router, dict) else None
+        )
+        classification = getattr(router, "classification", None) or (
+            router.get("classification") if isinstance(router, dict) else None
+        )
+        next_agent = getattr(router, "next_agent", None) or (
+            router.get("next_agent") if isinstance(router, dict) else None
+        )
+        parts.append(
+            f"Route: {next_agent} | Sentiment: {sentiment} | Intent: {classification}"
+        )
 
     directive = state.get("qa_directive")
     if directive and directive != "answer":
@@ -38,7 +46,9 @@ def _format_state_summary(state: dict) -> str:
 
     react = state.get("react_result")
     if react:
-        status = getattr(react, "status", None) or (react.get("status") if isinstance(react, dict) else None)
+        status = getattr(react, "status", None) or (
+            react.get("status") if isinstance(react, dict) else None
+        )
         if status:
             parts.append(f"ReAct: {status}")
 
@@ -92,6 +102,7 @@ def main():
 
         if user_input.lower() == "crm":
             from core_agent.tools import MOCK_CRM_PROFILES, ESCALATION_QUEUE
+
             print("\n--- Mock CRM Profiles ---")
             if MOCK_CRM_PROFILES:
                 for phone, profile in MOCK_CRM_PROFILES.items():
@@ -100,7 +111,9 @@ def main():
                 print("  (empty)")
             print(f"\n--- Escalation Queue ({len(ESCALATION_QUEUE)} items) ---")
             for i, report in enumerate(ESCALATION_QUEUE):
-                print(f"  [{i}] {report.get('reason', '?')} | urgency={report.get('urgency', '?')} | {report.get('chat_summary', '')}")
+                print(
+                    f"  [{i}] {report.get('reason', '?')} | urgency={report.get('urgency', '?')} | {report.get('chat_summary', '')}"
+                )
             print("-------------------\n")
             continue
 

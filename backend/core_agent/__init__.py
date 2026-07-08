@@ -1,5 +1,5 @@
 """Nuit Bot v2 — Core Agent package."""
 
-from .graph import NuitBot, compile_graph
+from .nuit_bot import NuitBot
 
-__all__ = ["NuitBot", "compile_graph"]
+__all__ = ["NuitBot"]

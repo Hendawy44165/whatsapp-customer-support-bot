@@ -1,0 +1,3 @@
+scenario_id,turn_number,user_message,history,output_reference
+policy_simple_01,1,"What is Nuit's return policy and how long do I have to initiate a return?","[]",""
+order_exchange_complex_02,2,"Can I exchange it for the Born in Milano scent instead?","[{""role"": ""user"", ""content"": ""Hi, I want to return my order 3021. The scent wasn't what I expected.""}, {""role"": ""agent"", ""content"": ""I understand the scent wasn't quite what you expected — but returns and exchanges are reserved for defective or damaged items only, so I'm unable to process an exchange for scent preference. If you'd like, I can help you explore other fragrance options that might suit your taste better.""}]",""

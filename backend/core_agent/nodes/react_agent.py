@@ -1,61 +1,56 @@
-"""
-ReAct agent node — handles CRM operations with tool calling.
-Uses a reasoning-first approach: plan → check params → call tools → return result.
-"""
-
-import re
-import json
-from typing import Dict
-from pydantic import BaseModel, Field
-from langchain_core.messages import SystemMessage, ToolMessage
+from dataclasses import dataclass
+from typing import Dict, Literal
+from pydantic import BaseModel, field_validator
 from langsmith import traceable
+from langchain.agents import create_agent
+from langchain.agents.middleware import after_agent
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain.agents.middleware import dynamic_prompt, ModelRequest
 
-from ..state import AgentState, ReactResult
+from ..state import ServiceBotState
 from ..config import get_model, load_prompt
 from ..tools import lookup_order, register_return, register_exchange
 
 
-# Tools available to the ReAct agent
-REACT_TOOLS = [lookup_order, register_return, register_exchange]
-REACT_TOOLS_BY_NAME = {t.name: t for t in REACT_TOOLS}
+@dataclass
+class ReactContext:
+    react_request: str | None
 
 
-class ReactPlan(BaseModel):
-    """Initial execution plan for the ReAct agent."""
-    estimated_steps: int | None = Field(
-        default=None,
-        description="The estimated number of tool calls needed to complete the task. Set to null if parameters are missing."
-    )
-    reasoning_plan: str = Field(
-        description="Step-by-step plan describing which tools will be called and why."
-    )
+class ReactResponse(BaseModel):
+    next_agent: Literal["qa", "escalate"]
+    missing_params: list[str]
+    result: str | None
+
+    @field_validator("missing_params", mode="before")
+    @classmethod
+    def coerce_missing_params(cls, v):
+        if v is None or v == "":
+            return []
+        if isinstance(v, str):
+            return [v]  # single stray string -> wrap it, don't reject it
+        return v
 
 
-def _extract_missing_params(text: str) -> list[str]:
+@dynamic_prompt
+def inject_context(request: ModelRequest) -> str:
+    ctx = request.runtime.context
+    base = load_prompt("react_agent.md")
+    return f"""{base}
+
+    <context>
+    react_request: {ctx.react_request}
+    </context>
     """
-    Extract missing parameter names from the agent's response.
-    Looks for the pattern: [MISSING: param1, param2]
-    """
-    match = re.search(r"\[MISSING:\s*(.+?)\]", text, re.IGNORECASE)
-    if match:
-        params_str = match.group(1)
-        return [p.strip() for p in params_str.split(",") if p.strip()]
-
-    # Fallback: look for common parameter names mentioned as needed
-    missing = []
-    text_lower = text.lower()
-    if "order" in text_lower and ("id" in text_lower or "number" in text_lower):
-        if "need" in text_lower or "provide" in text_lower or "missing" in text_lower:
-            missing.append("order_id")
-    if "phone" in text_lower:
-        if "need" in text_lower or "provide" in text_lower or "missing" in text_lower:
-            missing.append("phone")
-
-    return missing if missing else ["additional information"]
 
 
-@traceable(name="react_agent_node")
-def react_agent_node(state: AgentState) -> Dict:
+@after_agent
+def clear_qa_request(state: ServiceBotState, runtime):
+    return {"react_request": None}
+
+
+@traceable
+def react_agent_node(state: ServiceBotState) -> Dict:
     """
     Executes CRM operations using tool calling.
 
@@ -67,163 +62,26 @@ def react_agent_node(state: AgentState) -> Dict:
     5. If params present → calls tool → returns success/failed with result
     """
     model = get_model()
-    system_prompt = load_prompt("react_agent.md")
 
-    # Build the task context
-    react_request = state.get("react_request", "")
-    task_section = f"\n\n# CURRENT TASK\n{react_request}" if react_request else ""
-
-    full_system = system_prompt + task_section
-
-    # Build message list: system prompt + conversation history
-    messages = state.get("messages", [])
-    llm_messages = [SystemMessage(content=full_system)] + list(messages)
-
-    # 1. Run structured planning call to estimate tool steps
-    planner_model = model.with_structured_output(ReactPlan)
-    try:
-        plan = planner_model.invoke(llm_messages)
-        estimated = plan.estimated_steps
-        reasoning = plan.reasoning_plan
-    except Exception as e:
-        estimated = None
-        reasoning = f"Planning failed: {str(e)}"
-
-    # Determine dynamic max execution steps
-    if estimated is not None and estimated > 0:
-        max_steps = estimated * 2
-    else:
-        max_steps = 10
-
-    # Determine if planning failed due to exception
-    planner_failed = reasoning.startswith("Planning failed:")
-
-    # 2. Early exit if parameters are missing (estimated is None or 0)
-    current_count = state.get("react_turn_count", 0) + 1
-    if (estimated is None or estimated == 0) and not planner_failed:
-        missing = _extract_missing_params(reasoning)
-        return {
-            "react_result": ReactResult(
-                status="need_info",
-                tool_output=None,
-                missing_params=missing,
-                reasoning=reasoning,
-                failure_reason=None,
-            ),
-            "react_turn_count": current_count,
-        }
-
-    # Inject the planning result to guide the execution loop
-    plan_message = SystemMessage(
-        content=(
-            f"Execution Plan:\n"
-            f"- Reasoning Plan: {reasoning}\n"
-            f"- Estimated Tool Steps: {estimated}\n"
-            f"Execute the above plan using the available tools."
-        )
+    agent = create_agent(
+        model=model,
+        tools=[lookup_order, register_return, register_exchange],
+        checkpointer=InMemorySaver(),
+        response_format=ReactResponse,
+        middleware=[clear_qa_request, inject_context],
+        context_schema=ReactContext,
     )
 
-    # 3. Run execution tool-calling loop
-    model_with_tools = model.bind_tools(REACT_TOOLS)
-    tool_results = []
-    reasoning_parts = [f"Plan: {reasoning}"]
-    active_messages = list(llm_messages) + [plan_message]
+    context = ReactContext(
+        react_request=state["react_request"] if "react_request" in state else None
+    )
 
-    for step in range(max_steps):
-        response = model_with_tools.invoke(active_messages)
+    response = agent.invoke({"messages": state["messages"]}, context=context)
 
-        # Capture any reasoning text
-        if response.content:
-            reasoning_parts.append(response.content)
+    react_output = response["structured_response"]
 
-        if not response.tool_calls:
-            # Agent decided NOT to call tools — means it needs more info or is done
-            break
-
-        # Process tool calls
-        active_messages.append(response)
-
-        for tool_call in response.tool_calls:
-            tool_name = tool_call["name"]
-            tool_args = tool_call["args"]
-            tool_fn = REACT_TOOLS_BY_NAME.get(tool_name)
-
-            if tool_fn is None:
-                tool_result_str = json.dumps({
-                    "status": "error",
-                    "message": f"Unknown tool: {tool_name}",
-                })
-            else:
-                try:
-                    tool_result_str = tool_fn.invoke(tool_args)
-                except Exception as e:
-                    tool_result_str = json.dumps({
-                        "status": "error",
-                        "message": f"Tool execution error: {str(e)}",
-                    })
-
-            # Parse the result
-            try:
-                parsed = json.loads(tool_result_str)
-            except json.JSONDecodeError:
-                parsed = {"status": "error", "message": tool_result_str}
-
-            tool_results.append({
-                "tool": tool_name,
-                "args": tool_args,
-                "result": parsed,
-            })
-
-            # Add tool message for the next iteration
-            active_messages.append(
-                ToolMessage(content=tool_result_str, tool_call_id=tool_call["id"])
-            )
-
-    # Compile reasoning
-    compiled_reasoning = "\n".join(reasoning_parts) if reasoning_parts else "No reasoning output captured."
-
-    if tool_results:
-        # Tools were called — check outcomes
-        successes = [r for r in tool_results if r["result"].get("status") == "success"]
-        failures = [r for r in tool_results if r["result"].get("status") != "success"]
-
-        if successes:
-            # Use the last successful result as the primary output
-            return {
-                "react_result": ReactResult(
-                    status="success",
-                    tool_output=successes[-1]["result"],
-                    missing_params=None,
-                    reasoning=compiled_reasoning,
-                    failure_reason=None,
-                ),
-                "react_turn_count": current_count,
-            }
-        else:
-            # All tools failed
-            failure_messages = [
-                r["result"].get("message", "Unknown error") for r in failures
-            ]
-            return {
-                "react_result": ReactResult(
-                    status="failed",
-                    tool_output=failures[-1]["result"] if failures else None,
-                    missing_params=None,
-                    reasoning=compiled_reasoning,
-                    failure_reason="; ".join(failure_messages),
-                ),
-                "react_turn_count": current_count,
-            }
-    else:
-        # No tools called — agent needs more info from the user
-        missing = _extract_missing_params(compiled_reasoning)
-        return {
-            "react_result": ReactResult(
-                status="need_info",
-                tool_output=None,
-                missing_params=missing,
-                reasoning=compiled_reasoning,
-                failure_reason=None,
-            ),
-            "react_turn_count": current_count,
-        }
+    return {
+        "next_agent": react_output.next_agent,
+        "missing_params": react_output.missing_params,
+        "react_result": react_output.result,
+    }

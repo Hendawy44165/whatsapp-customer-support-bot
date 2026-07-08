@@ -44,3 +44,11 @@ Categorize what the user wants:
 
 ## CONTEXT
 Use the recent conversation history to understand context. A follow-up message like "what about the 50ml?" should be classified based on the prior conversation, not in isolation.
+
+## Output Format
+Return exactly one valid JSON object. Do not wrap it in markdown. Do not repeat the object. Do not include any explanation.
+e.g. {
+    "next_agent": "qa",
+    "sentiment": "calm",
+    "classification": "exchange"
+}

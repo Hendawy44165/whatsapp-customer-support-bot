@@ -35,13 +35,12 @@ sys.modules['agent.state'] = state
 sys.modules['agent.constants'] = constants
 sys.modules['agent.utils'] = utils
 sys.modules['agent.nodes'] = nodes
-sys.modules['agent.nodes.base'] = nodes.base
 
 # Load our database helper client
 from database import db
 
-# Import CustomerServiceAgent
-from core_agent.chatbot import CustomerServiceAgent
+# Import NuitBot as CustomerServiceAgent for backward compatibility
+from core_agent import NuitBot as CustomerServiceAgent
 
 # --- LifeSpan Manager for background Outbound queue worker thread ---
 is_worker_running = True

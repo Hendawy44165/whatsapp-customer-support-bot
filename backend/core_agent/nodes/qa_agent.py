@@ -1,75 +1,118 @@
-"""
-QA agent node — handles FAQ, policy questions, and presents ReAct results.
-Uses hardcoded knowledge in the system prompt (no RAG) and a query_products tool.
-Coordinates bidirectionally with the ReAct agent.
-"""
-
-from typing import Dict
+from dataclasses import dataclass
+from typing import Any, Dict, Literal, Optional
 from langchain_core.messages import SystemMessage, AIMessage, ToolMessage
 from langsmith import traceable
+from langchain.agents import create_agent
+from langchain.agents.middleware import after_agent
+from langchain.tools import tool, ToolRuntime
+from pydantic import BaseModel
+from langchain.agents.structured_output import ProviderStrategy
+from langgraph.checkpoint.memory import InMemorySaver
 
-from ..state import AgentState, QAOutput
+from ..state import ServiceBotState
 from ..config import get_model, load_prompt
-from ..tools import query_products
+from langchain.agents.middleware import dynamic_prompt, ModelRequest
 
 
-def _get_attr_or_key(obj, attr: str, default=None):
-    """Safely get an attribute or dict key from an object."""
-    if hasattr(obj, attr):
-        return getattr(obj, attr, default)
-    if isinstance(obj, dict):
-        return obj.get(attr, default)
-    return default
+@dataclass
+class QaContext:
+    react_result: str | None
+    missing_params: list | None
+    emotion: str
+    classification: str
 
 
-def _build_context_section(state: AgentState) -> str:
-    """Build the dynamic context section injected after the system prompt.
-    Only adds raw data context, with no python-side instructions or guiding text.
+class QaResponse(BaseModel):
+    qa_directive: Literal[
+        "answer", "delegate_to_react", "ask_for_params", "present_results", "escalate"
+    ]
+    react_request: str | None
+    next_agent: Literal["react", "end"]
+    user_response: str | None
+
+
+@dynamic_prompt
+def inject_context(request: ModelRequest) -> str:
+    ctx = request.runtime.context
+    base = load_prompt("qa_agent.md")
+    return f"""{base}
+
+    <context>
+    emotion: {ctx.emotion}
+    classification: {ctx.classification}
+    react_result: {ctx.react_result}
+    missing_params: {ctx.missing_params}
+    </context>
     """
-    lines = []
 
-    # Router context
-    router_output = state.get("router_output")
-    if router_output:
-        sentiment = _get_attr_or_key(router_output, "sentiment")
-        classification = _get_attr_or_key(router_output, "classification")
-        if sentiment:
-            lines.append(f"sentiment: {sentiment}")
-        if classification:
-            lines.append(f"classification: {classification}")
 
-    # ReAct result context (if coming back from ReAct)
-    react_result = state.get("react_result")
-    if react_result:
-        status = _get_attr_or_key(react_result, "status")
-        if status:
-            lines.append(f"react_status: {status}")
+@after_agent
+def clear_react_result(state: ServiceBotState, runtime):
+    return {"react_result": None, "missing_params": []}
 
-        tool_output = _get_attr_or_key(react_result, "tool_output")
-        if tool_output:
-            lines.append(f"react_tool_output: {tool_output}")
 
-        missing = _get_attr_or_key(react_result, "missing_params")
-        if missing:
-            lines.append(f"react_missing_params: {missing}")
-
-        reason = _get_attr_or_key(react_result, "failure_reason")
-        if reason:
-            lines.append(f"react_failure_reason: {reason}")
-
-    # Learned user info
-    user_info = state.get("learned_user_info", {})
-    if user_info:
-        lines.append(f"learned_user_info: {user_info}")
-
-    if not lines:
-        return ""
-
-    return "\n\n# CONTEXT VARIABLES\n" + "\n".join(f"{line}" for line in lines)
+@tool
+def get_products() -> dict:
+    """Tool to query product details."""
+    return {
+        "flagship_edp_50ml": {
+            "name": "Flagship Eau de Parfum (EDP) — 50ml",
+            "standard_price": "EGP 855.00",
+            "promo_price": "EGP 599.00",
+            "variants": [
+                "Rum",
+                "Dulce de Leche",
+                "Head Turner",
+                "Born in Milano",
+                "Born in Vegas",
+                "Bounty Hunter",
+                "Red Flag",
+                "Green Flag",
+                "Espresso Martini",
+                "Forbidden Fruit",
+                "Casa Di Rosa",
+                "Lindo Día",
+                "Monroe",
+                "Warm Vanilla",
+                "French Foulard",
+                "True Hipster",
+                "Leather Jacket",
+                "Cappuccina",
+                "Choco Frappe",
+                "Hazelwood",
+                "Heritage",
+                "I am Harvey",
+            ],
+        },
+        "luxury_collaboration": {
+            "name": "Avec Hatshepsut (Nuit X Temraza)",
+            "price": "EGP 1,950.00",
+            "notes": "exclusive art flacon, NOT eligible for standard EDP discounts",
+        },
+        "perfume_oils_shots_khamrias": {
+            "name": "Concentrated Perfume Oils (Shots) & Khamrias",
+            "price": "EGP 475.00",
+            "examples": [
+                "Vanilla Shot",
+                "Born in Milano Shot",
+                "Caramel Shot",
+                "Head Turner Shot",
+            ],
+        },
+        "body_splash_mists": {
+            "name": "Body Splash & Mists",
+            "price": "EGP 315.00",
+            "examples": [
+                "Soft Cloud Heart",
+                "Very Delicate Vanilla",
+                "The Harvey Splash",
+            ],
+        },
+    }
 
 
 @traceable(name="qa_agent_node")
-def qa_agent_node(state: AgentState) -> Dict:
+def qa_agent_node(state: ServiceBotState) -> Dict:
     """
     Generates a brand-voice response for the customer.
 
@@ -81,54 +124,36 @@ def qa_agent_node(state: AgentState) -> Dict:
     - Escalation when unable to resolve
     """
     model = get_model()
-    system_prompt = load_prompt("qa_agent.md")
+    qa_agent = create_agent(
+        model=model,
+        tools=[get_products],
+        checkpointer=InMemorySaver(),
+        middleware=[clear_react_result, inject_context],
+        response_format=QaResponse,
+        context_schema=QaContext,
+    )
 
-    # Append dynamic context
-    context_section = _build_context_section(state)
-    full_system_prompt = system_prompt + context_section
+    context = QaContext(
+        react_result=state["react_result"] if "react_result" in state else None,
+        missing_params=state["missing_params"] if "missing_params" in state else None,
+        emotion=state["sentiment"],
+        classification=state["classification"],
+    )
 
-    # Build initial message list
-    messages = state.get("messages", [])
-    active_messages = [SystemMessage(content=full_system_prompt)] + list(messages)
+    response = qa_agent.invoke(
+        {"messages": state["messages"]},
+        context=context,
+    )
 
-    # 1. Bind query_products tool to model for any product information retrieval
-    model_with_tools = model.bind_tools([query_products])
+    qa_output = response["structured_response"]
 
-    # Run tool invocation loop (max 2 steps)
-    for _ in range(2):
-        response = model_with_tools.invoke(active_messages)
-        # Always append response first so it is not discarded
-        active_messages.append(response)
-        if not response.tool_calls:
-            break
-
-        for tool_call in response.tool_calls:
-            if tool_call["name"] == "query_products":
-                tool_result_str = query_products.invoke(tool_call["args"])
-                active_messages.append(
-                    ToolMessage(content=tool_result_str, tool_call_id=tool_call["id"])
-                )
-
-    # 2. Get final structured output using the Pydantic QAOutput schema
-    structured_model = model.with_structured_output(QAOutput)
-    final_output = structured_model.invoke(active_messages)
-
-    # Extract final clean user-facing message and directive
-    clean_message = final_output.message.strip()
-    directive = final_output.qa_directive
-    react_request = final_output.react_request
-
-    updates: Dict = {
-        "messages": [AIMessage(content=clean_message)],
-        "qa_directive": directive,
-        "final_response": clean_message,
+    output = {
+        "qa_directive": qa_output.qa_directive,
+        "react_request": qa_output.react_request,
+        "next_agent": qa_output.next_agent,
     }
 
-    if react_request:
-        updates["react_request"] = react_request
+    if qa_output.user_response and qa_output.user_response is not None:
+        output["messages"] = [AIMessage(content=qa_output.user_response)]
 
-    # Clear react_result after we've consumed it (prevent stale data on next turn)
-    if state.get("react_result") is not None:
-        updates["react_result"] = None
-
-    return updates
+    return output

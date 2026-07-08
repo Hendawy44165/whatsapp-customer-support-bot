@@ -1,13 +1,7 @@
-"""
-Blocker node — handles unrelated or harmful messages with a polite refusal.
-No LLM call needed — simple deterministic response.
-"""
-
 from typing import Dict
 from langchain_core.messages import AIMessage
 from langsmith import traceable
-from ..state import AgentState
-
+from ..state import AgentState, ServiceBotState
 
 BLOCK_RESPONSE = (
     "Thank you for reaching out. I am Nuit Fragrances' dedicated concierge "
@@ -16,13 +10,13 @@ BLOCK_RESPONSE = (
 )
 
 
-@traceable(name="blocker_node")
-def blocker_node(state: AgentState) -> Dict:
+@traceable
+def blocker_node(state: ServiceBotState) -> Dict:
     """
     Returns a polite refusal for unrelated or harmful content.
     Deterministic — no LLM call.
     """
     return {
+        "next_agent": "end",
         "messages": [AIMessage(content=BLOCK_RESPONSE)],
-        "final_response": BLOCK_RESPONSE,
     }
