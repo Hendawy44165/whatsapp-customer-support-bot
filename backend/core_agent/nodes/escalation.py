@@ -1,13 +1,13 @@
-"""
-Human Escalation agent node — generates escalation reports and queues them.
-Uses structured output with Pydantic for reliable report generation.
-"""
-
-from typing import Dict
-from langchain_core.messages import SystemMessage, AIMessage, HumanMessage
+from dataclasses import dataclass
+from typing import Dict, Literal
+from pydantic import BaseModel, Field
+from langchain_core.messages import AIMessage
 from langsmith import traceable
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import InMemorySaver
+from langchain.agents.middleware import dynamic_prompt, after_agent, ModelRequest
 
-from ..state import AgentState, ServiceBotState
+from ..state import ServiceBotState
 from ..config import get_model, load_prompt
 from ..tools import add_to_escalation_queue
 
@@ -18,15 +18,98 @@ HANDOFF_MESSAGE = (
 )
 
 
-@traceable
+@dataclass
+class EscalationContext:
+    sentiment: str
+    gathered_parameters: dict
+    gathered_information: list
+
+
+class EscalationResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+    reason: Literal[
+        "customer_anger",
+        "react_failure",
+        "direct_request",
+        "user_stalling",
+        "repeated_failure",
+    ] = Field(description="Reason for escalation.")
+    summary: str = Field(
+        description="A concise summary of the customer's request and state."
+    )
+    urgency: float = Field(description="Urgency score from 0.0 (low) to 1.0 (high).")
+    recommended_action: str = Field(
+        description="Suggested solution for the human agent."
+    )
+    ticket_response: str = Field(
+        description="The handoff confirmation message to send back to the user."
+    )
+
+
+@dynamic_prompt
+def inject_escalation_context(request: ModelRequest) -> str:
+    ctx = request.runtime.context
+    base = load_prompt("escalation.md")
+    return f"""{base}
+
+    <escalation_context>
+    User Sentiment: {ctx.sentiment}
+    Gathered Parameters: {ctx.gathered_parameters}
+    Gathered Information: {ctx.gathered_information}
+    </escalation_context>
+    """
+
+
+@after_agent
+def mimic_send_to_human(state: ServiceBotState, runtime):
+    output = runtime.agent_output.structured_response
+    report = {
+        "reason": output.reason,
+        "summary": output.summary,
+        "urgency": output.urgency,
+        "recommended_action": output.recommended_action,
+        "metadata": {
+            "sentiment": state.get("sentiment"),
+            "gathered_parameters": state.get("gathered_parameters"),
+            "gathered_information": state.get("gathered_information"),
+        },
+    }
+    # Call mock CRM queue tool to register the ticket
+    add_to_escalation_queue(report)
+    return {}
+
+
+@traceable(name="escalation_node")
 def escalation_node(state: ServiceBotState) -> Dict:
     """
-    Generates a structured escalation report from the conversation history
-    and adds it to the escalation queue for human agents.
+    Generates a structured escalation report from the conversation history,
+    triggers the after-agent middleware to queue it, and returns the response message.
     """
     model = get_model()
-    system_prompt = load_prompt("escalation.md")
+    escalation_agent = create_agent(
+        model=model,
+        checkpointer=InMemorySaver(),
+        response_format=EscalationResponse,
+        middleware=[inject_escalation_context, mimic_send_to_human],
+        context_schema=EscalationContext,
+    )
+
+    context = EscalationContext(
+        sentiment=state.get("sentiment", "neutral"),
+        gathered_parameters=state.get("gathered_parameters", {}),
+        gathered_information=state.get("gathered_information", []),
+    )
+
+    response = escalation_agent.invoke(
+        {"messages": state["messages"]},
+        context=context,
+    )
+
+    escalation_output = response["structured_response"]
 
     return {
-        "messages": [AIMessage(content="Generating escalation report...")],
+        "next_agent": "end",
+        "messages": [
+            AIMessage(content=escalation_output.ticket_response or HANDOFF_MESSAGE)
+        ],
     }

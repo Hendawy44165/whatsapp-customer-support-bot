@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 from langsmith import traceable
 from langchain.agents import create_agent
@@ -14,6 +14,7 @@ class RouterResponse(BaseModel):
     next_agent: str
     sentiment: str
     classification: str
+    extracted_parameters: dict
 
 
 @traceable(name="router_node")
@@ -25,7 +26,7 @@ def router_node(state: ServiceBotState) -> Dict:
         model=model,
         system_prompt=system_prompt,
         checkpointer=InMemorySaver(),
-        response_format=ProviderStrategy(schema=RouterResponse, strict=True),
+        response_format=RouterResponse,
     )
 
     response = router_agent.invoke({"messages": state["messages"]})
@@ -36,4 +37,5 @@ def router_node(state: ServiceBotState) -> Dict:
         "next_agent": router_output.next_agent,
         "sentiment": router_output.sentiment,
         "classification": router_output.classification,
+        "extracted_parameters": router_output.extracted_parameters,
     }

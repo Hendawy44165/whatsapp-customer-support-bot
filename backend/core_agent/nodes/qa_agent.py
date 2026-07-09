@@ -1,34 +1,29 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Literal, Optional
-from langchain_core.messages import SystemMessage, AIMessage, ToolMessage
+from typing import Dict, Literal
+from langchain_core.messages import AIMessage
 from langsmith import traceable
 from langchain.agents import create_agent
-from langchain.agents.middleware import after_agent
-from langchain.tools import tool, ToolRuntime
-from pydantic import BaseModel
-from langchain.agents.structured_output import ProviderStrategy
+from langchain.tools import tool
+from pydantic import BaseModel, Field
 from langgraph.checkpoint.memory import InMemorySaver
+from langchain.agents.middleware import dynamic_prompt, ModelRequest
 
 from ..state import ServiceBotState
 from ..config import get_model, load_prompt
-from langchain.agents.middleware import dynamic_prompt, ModelRequest
 
 
 @dataclass
 class QaContext:
-    react_result: str | None
-    missing_params: list | None
-    emotion: str
+    sentiment: str
     classification: str
 
 
 class QaResponse(BaseModel):
-    qa_directive: Literal[
-        "answer", "delegate_to_react", "ask_for_params", "present_results", "escalate"
-    ]
-    react_request: str | None
-    next_agent: Literal["react", "end"]
-    user_response: str | None
+    model_config = {"extra": "forbid"}
+    user_response: str = Field(
+        description="The response message to send to the customer on WhatsApp."
+    )
+    next_agent: Literal["end"] = Field(description="Always set to end.")
 
 
 @dynamic_prompt
@@ -38,17 +33,10 @@ def inject_context(request: ModelRequest) -> str:
     return f"""{base}
 
     <context>
-    emotion: {ctx.emotion}
-    classification: {ctx.classification}
-    react_result: {ctx.react_result}
-    missing_params: {ctx.missing_params}
+    Sentiment: {ctx.sentiment}
+    Classification: {ctx.classification}
     </context>
     """
-
-
-@after_agent
-def clear_react_result(state: ServiceBotState, runtime):
-    return {"react_result": None, "missing_params": []}
 
 
 @tool
@@ -114,30 +102,22 @@ def get_products() -> dict:
 @traceable(name="qa_agent_node")
 def qa_agent_node(state: ServiceBotState) -> Dict:
     """
-    Generates a brand-voice response for the customer.
-
-    Handles:
-    - Direct FAQ/policy answers (knowledge hardcoded in system prompt)
-    - Querying product details via query_products tool
-    - Parameter collection for ReAct delegation
-    - Presenting ReAct tool results in brand voice
-    - Escalation when unable to resolve
+    Generates a brand-voice response for the customer answering simple policy,
+    product, or brand questions.
     """
     model = get_model()
     qa_agent = create_agent(
         model=model,
         tools=[get_products],
         checkpointer=InMemorySaver(),
-        middleware=[clear_react_result, inject_context],
+        middleware=[inject_context],
         response_format=QaResponse,
         context_schema=QaContext,
     )
 
     context = QaContext(
-        react_result=state["react_result"] if "react_result" in state else None,
-        missing_params=state["missing_params"] if "missing_params" in state else None,
-        emotion=state["sentiment"],
-        classification=state["classification"],
+        sentiment=state.get("sentiment", "neutral"),
+        classification=state.get("classification", "general_inquiry"),
     )
 
     response = qa_agent.invoke(
@@ -148,12 +128,10 @@ def qa_agent_node(state: ServiceBotState) -> Dict:
     qa_output = response["structured_response"]
 
     output = {
-        "qa_directive": qa_output.qa_directive,
-        "react_request": qa_output.react_request,
         "next_agent": qa_output.next_agent,
     }
 
-    if qa_output.user_response and qa_output.user_response is not None:
+    if qa_output.user_response:
         output["messages"] = [AIMessage(content=qa_output.user_response)]
 
     return output

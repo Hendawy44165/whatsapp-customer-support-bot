@@ -10,9 +10,10 @@ from .state import ServiceBotState
 from .nodes import (
     router_node,
     qa_agent_node,
-    react_agent_node,
     escalation_node,
     blocker_node,
+    planner_node,
+    executor_node,
 )
 
 load_dotenv()
@@ -70,7 +71,8 @@ class NuitBot:
         # Register nodes
         workflow.add_node("router", router_node)
         workflow.add_node("qa", qa_agent_node)
-        workflow.add_node("react", react_agent_node)
+        workflow.add_node("planner", planner_node)
+        workflow.add_node("executor", executor_node)
         workflow.add_node("escalator", escalation_node)
         workflow.add_node("blocker", blocker_node)
 
@@ -84,7 +86,7 @@ class NuitBot:
                 "qa": "qa",
                 "escalate": "escalator",
                 "blocker": "blocker",
-                "react": "react",
+                "planner": "planner",
             },
         )
 
@@ -92,17 +94,25 @@ class NuitBot:
             "qa",
             self._route,
             {
-                "react": "react",
                 "end": END,
             },
         )
 
         workflow.add_conditional_edges(
-            "react",
+            "planner",
             self._route,
             {
-                "qa": "qa",
+                "executor": "executor",
+            },
+        )
+
+        workflow.add_conditional_edges(
+            "executor",
+            self._route,
+            {
+                "planner": "planner",
                 "escalate": "escalator",
+                "end": END,
             },
         )
 
@@ -126,14 +136,16 @@ class NuitBot:
 
         if next_agent == "qa":
             return "qa"
-        elif next_agent == "escalate":
+        elif next_agent == "escalate" or next_agent == "escalator":
             return "escalate"
-        elif next_agent == "blocker":
+        elif next_agent == "blocker" or next_agent == "block":
             return "blocker"
-        elif next_agent == "react":
-            return "react"
+        elif next_agent == "planner":
+            return "planner"
+        elif next_agent == "executor":
+            return "executor"
         elif next_agent == "end":
             return "end"
 
         else:
-            raise ValueError("Router output does not specify a valid route.")
+            raise ValueError(f"Router output does not specify a valid route: {next_agent}")
