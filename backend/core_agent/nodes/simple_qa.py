@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.agents.middleware import dynamic_prompt, ModelRequest
 
+from langchain_core.messages import AIMessage
 from ..state import ServiceBotState
 from ..config import get_model, load_prompt
 
@@ -161,6 +162,6 @@ def simple_qa_node(state: ServiceBotState) -> dict:
     qa_output = response["structured_response"]
 
     return {
-        "simple_qa_response": qa_output.user_response or "",
-        "next_agent": "analyzer",
+        "messages": [AIMessage(content=qa_output.user_response or "")],
+        "next_agent": "end",
     }

@@ -141,7 +141,7 @@ def query_products(query: str = "") -> str:
 
 @tool
 def lookup_order(order_id: str = "", phone: str = "") -> str:
-    """Look up an order by order ID or phone number.
+    """Look up an order by order ID or phone number. ONLY ONE OF THEM IS NEEDED
 
     Args:
         order_id: The order ID to look up.
@@ -321,7 +321,12 @@ def lookup_crm_profile(phone: str) -> str:
     profile = get_crm_profile(phone)
     if profile:
         return json.dumps({"status": "success", "profile": profile})
-    return json.dumps({"status": "not_found", "message": "No CRM profile found for this phone number."})
+    return json.dumps(
+        {
+            "status": "not_found",
+            "message": "No CRM profile found for this phone number.",
+        }
+    )
 
 
 def add_to_escalation_queue(report: dict) -> None:

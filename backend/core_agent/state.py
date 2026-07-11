@@ -8,15 +8,15 @@ from langchain.agents import AgentState
 from typing import TypedDict, List
 
 
-class AnalyzerMetadata(TypedDict):
-    notes: str
-    directive: Literal[
-        "answer_directly",
-        "ask_clarifying_question",
-        "recommend_solution",
-        "confirm_execution",
-        "escalate",
-    ]
+# class AnalyzerMetadata(TypedDict):
+#     notes: str
+#     directive: Literal[
+#         "answer_directly",
+#         "ask_clarifying_question",
+#         "recommend_solution",
+#         "confirm_execution",
+#         "escalate",
+#     ]
 
 
 class ServiceBotState(AgentState):
@@ -34,11 +34,11 @@ class ServiceBotState(AgentState):
         "need_qa",
     ]
     sentiment: str
-    notes: str | None
-    directive: str | None
+    # notes: str | None
+    # directive: str | None
 
     # QA & Profiler variables
-    simple_qa_response: str | None
+    # simple_qa_response: str | None
 
     # Private executer state
     gathered_parameters: dict
