@@ -1,24 +1,29 @@
-from typing import Dict, Any
-from langchain_core.messages import SystemMessage, HumanMessage
+from typing import Literal
+
 from langsmith import traceable
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from pydantic import BaseModel
-from langchain.agents.structured_output import ProviderStrategy
 
 from ..state import ServiceBotState
-from ..config import get_model, load_prompt, THREAD_ID
+from ..config import get_model, load_prompt
 
 
 class RouterResponse(BaseModel):
-    next_agent: str
+    next_agent: Literal[
+        "simple_qa",
+        "executer",
+        "escalate",
+        "blocker",
+        "end",
+        "analyzer",
+        "need_qa",
+    ]
     sentiment: str
-    classification: str
-    extracted_parameters: dict
 
 
-@traceable(name="router_node")
-def router_node(state: ServiceBotState) -> Dict:
+@traceable
+def router_node(state: ServiceBotState) -> dict:
     model = get_model()
     system_prompt = load_prompt("router.md")
 
@@ -36,6 +41,4 @@ def router_node(state: ServiceBotState) -> Dict:
     return {
         "next_agent": router_output.next_agent,
         "sentiment": router_output.sentiment,
-        "classification": router_output.classification,
-        "extracted_parameters": router_output.extracted_parameters,
     }

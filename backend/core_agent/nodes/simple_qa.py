@@ -1,6 +1,6 @@
+import os
 from dataclasses import dataclass
-from typing import Dict, Literal
-from langchain_core.messages import AIMessage
+from typing import Literal
 from langsmith import traceable
 from langchain.agents import create_agent
 from langchain.tools import tool
@@ -15,7 +15,34 @@ from ..config import get_model, load_prompt
 @dataclass
 class QaContext:
     sentiment: str
-    classification: str
+    kb_context: str = ""
+
+
+def load_all_documents() -> str:
+    """Read and combine all 3 brand policies and information documents."""
+    docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs")
+    filenames = ["terms_of_conditions_and_policies.md", "faq.md", "brand_identity.md"]
+    combined = []
+
+    for filename in filenames:
+        doc_path = os.path.join(docs_dir, filename)
+        if os.path.exists(doc_path):
+            try:
+                with open(doc_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                # Clean out YAML frontmatter if present
+                if content.startswith("---"):
+                    parts = content.split("---", 2)
+                    if len(parts) >= 3:
+                        content = parts[2]
+                content = content.strip()
+                combined.append(f'<document name="{filename}">\n{content}\n</document>')
+            except Exception as e:
+                combined.append(
+                    f'<document name="{filename}">\nFailed to load: {e}\n</document>'
+                )
+
+    return "\n\n".join(combined)
 
 
 class QaResponse(BaseModel):
@@ -29,14 +56,22 @@ class QaResponse(BaseModel):
 @dynamic_prompt
 def inject_context(request: ModelRequest) -> str:
     ctx = request.runtime.context
-    base = load_prompt("qa_agent.md")
-    return f"""{base}
+    base = load_prompt("simple_qa.md")
+
+    injected = f"""{base}
 
     <context>
     Sentiment: {ctx.sentiment}
-    Classification: {ctx.classification}
     </context>
     """
+
+    if getattr(ctx, "kb_context", None):
+        injected += f"""
+    <retrieved_document>
+    {ctx.kb_context}
+    </retrieved_document>
+    """
+    return injected
 
 
 @tool
@@ -99,12 +134,10 @@ def get_products() -> dict:
     }
 
 
-@traceable(name="qa_agent_node")
-def qa_agent_node(state: ServiceBotState) -> Dict:
-    """
-    Generates a brand-voice response for the customer answering simple policy,
-    product, or brand questions.
-    """
+@traceable
+def simple_qa_node(state: ServiceBotState) -> dict:
+    kb_context = load_all_documents()
+
     model = get_model()
     qa_agent = create_agent(
         model=model,
@@ -117,7 +150,7 @@ def qa_agent_node(state: ServiceBotState) -> Dict:
 
     context = QaContext(
         sentiment=state.get("sentiment", "neutral"),
-        classification=state.get("classification", "general_inquiry"),
+        kb_context=kb_context,
     )
 
     response = qa_agent.invoke(
@@ -127,11 +160,7 @@ def qa_agent_node(state: ServiceBotState) -> Dict:
 
     qa_output = response["structured_response"]
 
-    output = {
-        "next_agent": qa_output.next_agent,
+    return {
+        "simple_qa_response": qa_output.user_response or "",
+        "next_agent": "analyzer",
     }
-
-    if qa_output.user_response:
-        output["messages"] = [AIMessage(content=qa_output.user_response)]
-
-    return output

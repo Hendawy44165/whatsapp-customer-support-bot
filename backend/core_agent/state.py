@@ -5,28 +5,42 @@ from langchain_core.messages import BaseMessage
 from langchain.agents import AgentState
 
 
+from typing import TypedDict, List
+
+
+class AnalyzerMetadata(TypedDict):
+    notes: str
+    directive: Literal[
+        "answer_directly",
+        "ask_clarifying_question",
+        "recommend_solution",
+        "confirm_execution",
+        "escalate",
+    ]
+
+
 class ServiceBotState(AgentState):
     """Shared state passed through all nodes in the LangGraph."""
 
     messages: Annotated[list[BaseMessage], add_messages]
-    next_agent: Literal["router", "qa", "planner", "executor", "escalator", "blocker", "end"]
+    next_agent: Literal[
+        "router",
+        "simple_qa",
+        "executer",
+        "escalate",
+        "blocker",
+        "end",
+        "analyzer",
+        "need_qa",
+    ]
     sentiment: str
-    classification: str
-    
-    # Communication channel between Planner and Executor
-    planner_command: str
-    executor_report: str
-    required_docs: list[str]
-    
-    # Private executor state
-    gathered_parameters: dict[str, Any]
-    gathered_information: list[str]
-    extracted_parameters: dict[str, Any]
+    notes: str | None
+    directive: str | None
 
-    # Legacy fields kept temporarily to avoid import / runtime failures during transition
-    qa_directive: Optional[Literal[
-        "answer", "delegate_to_react", "ask_for_params", "present_results", "escalate"
-    ]]
-    react_request: Optional[Any]
-    react_result: Optional[str]
-    missing_params: Optional[list]
+    # QA & Profiler variables
+    simple_qa_response: str | None
+
+    # Private executer state
+    gathered_parameters: dict
+    gathered_information: list
+    extracted_parameters: dict

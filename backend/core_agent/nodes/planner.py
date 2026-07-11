@@ -20,7 +20,7 @@ class PlannerContext:
     required_tools: list[str]
     sentiment: str
     classification: str
-    executor_report: str
+    executer_report: str
 
 
 class PlannerResponse(BaseModel):
@@ -28,11 +28,11 @@ class PlannerResponse(BaseModel):
     planner_command: str = Field(
         description=(
             "The plain text diagnosis, gathered details, overall strategy, "
-            "and active step-by-step instructions for the executor to perform in this turn."
+            "and active step-by-step instructions for the executer to perform in this turn."
         )
     )
     required_docs: list[str] = Field(description="Required SOP documents to load.")
-    next_agent: Literal["executor"] = Field(description="Always set to executor.")
+    next_agent: Literal["executer"] = Field(description="Always set to executer.")
 
 
 @dynamic_prompt
@@ -53,9 +53,9 @@ def inject_planner_context(request: ModelRequest) -> str:
 <current_state>
 <sentiment>{ctx.sentiment}</sentiment>
 <intent_classification>{ctx.classification}</intent_classification>
-<executor_report>
-{ctx.executor_report or "No report from previous executor node execution."}
-</executor_report>
+<executer_report>
+{ctx.executer_report or "No report from previous executer node execution."}
+</executer_report>
 </current_state>
 """
 
@@ -116,7 +116,7 @@ def planner_node(state: ServiceBotState) -> Dict:
         required_tools=required_tools,
         sentiment=state.get("sentiment", "neutral"),
         classification=state.get("classification", "general_inquiry"),
-        executor_report=state.get("executor_report", ""),
+        executer_report=state.get("executer_report", ""),
     )
 
     # Invoke agent
@@ -135,10 +135,10 @@ def planner_node(state: ServiceBotState) -> Dict:
         if v:
             gathered_params[k] = v
 
-    # Return planner command and clear executor_report (acting as post-planner middleware)
+    # Return planner command and clear executer_report (acting as post-planner middleware)
     return {
         "planner_command": planner_output.planner_command,
         "required_docs": planner_output.required_docs,
         "next_agent": planner_output.next_agent,
-        "executor_report": "",  # Clear the report to avoid infinite loop
+        "executer_report": "",  # Clear the report to avoid infinite loop
     }

@@ -16,7 +16,7 @@ from ..tools import query_products, lookup_order, register_return, register_exch
 
 
 @dataclass
-class ExecutorContext:
+class executerContext:
     required_docs: list[str]
     planner_command: str
     gathered_parameters: dict[str, Any]
@@ -34,9 +34,9 @@ class GatheredParameters(BaseModel):
     new_item: str | None = None
 
 
-class ExecutorResponse(BaseModel):
+class executerResponse(BaseModel):
     model_config = {"extra": "forbid"}
-    executor_report: str = Field(
+    executer_report: str = Field(
         description="A plain text report summarizing what you did, what tools you called, what you found, and what parameters you updated/saved."
     )
     gathered_parameters: GatheredParameters = Field(
@@ -53,14 +53,14 @@ class ExecutorResponse(BaseModel):
     )
     missing_params: list[str] | None = Field(
         default=None,
-        description="List of parameters currently missing and being asked for in this turn (e.g. ['order_id'])."
+        description="List of parameters currently missing and being asked for in this turn (e.g. ['order_id']).",
     )
 
 
 @dynamic_prompt
-def inject_executor_context(request: ModelRequest) -> str:
+def inject_executer_context(request: ModelRequest) -> str:
     ctx = request.runtime.context
-    base_prompt = load_prompt("executor.md")
+    base_prompt = load_prompt("executer.md")
 
     # Loader Middleware: load SOP documents dynamically
     injected_docs = []
@@ -102,8 +102,8 @@ def inject_executor_context(request: ModelRequest) -> str:
     """
 
 
-@traceable(name="executor_node")
-def executor_node(state: ServiceBotState) -> Dict:
+@traceable(name="executer_node")
+def executer_node(state: ServiceBotState) -> Dict:
     # 1. Resolve framework file based on router classification to get SOP details
     classification = state.get("classification", "").lower()
 
@@ -121,7 +121,9 @@ def executor_node(state: ServiceBotState) -> Dict:
         else:
             filename = "general_support_framework.md"
 
-        docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs")
+        docs_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "docs"
+        )
         framework_path = os.path.join(docs_dir, filename)
 
         if os.path.exists(framework_path):
@@ -130,23 +132,23 @@ def executor_node(state: ServiceBotState) -> Dict:
             metadata = parse_frontmatter(content)
             required_docs = metadata.get("required_docs", required_docs)
 
-    # 2. Build model and Executor agent
+    # 2. Build model and executer agent
     model = get_model()
 
-    # Executor has access to all CRM tools
+    # executer has access to all CRM tools
     all_tools = [query_products, lookup_order, register_return, register_exchange]
 
-    executor_agent = create_agent(
+    executer_agent = create_agent(
         model=model,
         tools=all_tools,
         checkpointer=InMemorySaver(),
-        response_format=ExecutorResponse,
-        middleware=[inject_executor_context],
-        context_schema=ExecutorContext,
+        response_format=executerResponse,
+        middleware=[inject_executer_context],
+        context_schema=executerContext,
     )
 
     # Prepare context dataclass
-    context = ExecutorContext(
+    context = executerContext(
         required_docs=required_docs,
         planner_command=state.get("planner_command", ""),
         gathered_parameters=state.get("gathered_parameters", {}),
@@ -154,26 +156,26 @@ def executor_node(state: ServiceBotState) -> Dict:
     )
 
     # Invoke agent
-    response = executor_agent.invoke(
+    response = executer_agent.invoke(
         {"messages": state["messages"]},
         context=context,
     )
 
-    executor_output = response["structured_response"]
+    executer_output = response["structured_response"]
 
-    gathered_params_dict = executor_output.gathered_parameters.model_dump()
+    gathered_params_dict = executer_output.gathered_parameters.model_dump()
     clean_params = {k: v for k, v in gathered_params_dict.items() if v is not None}
 
     output = {
-        "executor_report": executor_output.executor_report,
+        "executer_report": executer_output.executer_report,
         "gathered_parameters": clean_params,
-        "gathered_information": executor_output.gathered_information,
-        "next_agent": executor_output.next_agent,
-        "planner_command": "",  # Clear the planner command to avoid loop (post-executor middleware)
-        "missing_params": executor_output.missing_params or [],
+        "gathered_information": executer_output.gathered_information,
+        "next_agent": executer_output.next_agent,
+        "planner_command": "",  # Clear the planner command to avoid loop (post-executer middleware)
+        "missing_params": executer_output.missing_params or [],
     }
 
-    if executor_output.new_message:
-        output["messages"] = [AIMessage(content=executor_output.new_message)]
+    if executer_output.new_message:
+        output["messages"] = [AIMessage(content=executer_output.new_message)]
 
     return output

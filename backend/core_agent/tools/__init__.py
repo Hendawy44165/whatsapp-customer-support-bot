@@ -311,6 +311,19 @@ def get_crm_profile(phone: str) -> dict | None:
     return MOCK_CRM_PROFILES.get(phone)
 
 
+@tool
+def lookup_crm_profile(phone: str) -> str:
+    """Retrieve the customer's CRM profile, history, preferences, and details.
+
+    Args:
+        phone: The customer's contact phone number.
+    """
+    profile = get_crm_profile(phone)
+    if profile:
+        return json.dumps({"status": "success", "profile": profile})
+    return json.dumps({"status": "not_found", "message": "No CRM profile found for this phone number."})
+
+
 def add_to_escalation_queue(report: dict) -> None:
     """Add an escalation report to the queue (mock)."""
     ESCALATION_QUEUE.append(report)
