@@ -332,3 +332,6 @@ def lookup_crm_profile(phone: str) -> str:
 def add_to_escalation_queue(report: dict) -> None:
     """Add an escalation report to the queue (mock)."""
     ESCALATION_QUEUE.append(report)
+
+
+from .products_db import query_products_sql, get_product_details, search_products_by_description

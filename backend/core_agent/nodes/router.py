@@ -12,12 +12,8 @@ from ..config import get_model, load_prompt
 class RouterResponse(BaseModel):
     next_agent: Literal[
         "simple_qa",
-        "executer",
         "escalate",
         "blocker",
-        "end",
-        "analyzer",
-        "need_qa",
     ]
     sentiment: str
 

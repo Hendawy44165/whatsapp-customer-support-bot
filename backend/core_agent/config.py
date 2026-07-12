@@ -18,12 +18,16 @@ def get_model():
     model = os.getenv("PROVIDER_MODEL_NAME")
     model_provider = os.getenv("MODEL_PROVIDER")
 
-    return init_chat_model(
-        model=model,
-        api_key=api_key,
-        model_provider=model_provider,
-        base_url=base_url,
-    )
+    kwargs = {
+        "model": model,
+        "model_provider": model_provider,
+    }
+    if api_key:
+        kwargs["api_key"] = api_key
+    if base_url:
+        kwargs["base_url"] = base_url
+
+    return init_chat_model(**kwargs)
 
 
 def load_prompt(filename: str) -> str:

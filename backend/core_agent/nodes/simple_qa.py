@@ -11,6 +11,7 @@ from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langchain_core.messages import AIMessage
 from ..state import ServiceBotState
 from ..config import get_model, load_prompt
+from ..tools import query_products_sql, get_product_details, search_products_by_description, lookup_order
 
 
 @dataclass
@@ -142,7 +143,7 @@ def simple_qa_node(state: ServiceBotState) -> dict:
     model = get_model()
     qa_agent = create_agent(
         model=model,
-        tools=[get_products],
+        tools=[query_products_sql, get_product_details, search_products_by_description, lookup_order],
         checkpointer=InMemorySaver(),
         middleware=[inject_context],
         response_format=QaResponse,

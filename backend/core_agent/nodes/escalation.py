@@ -60,25 +60,6 @@ def inject_escalation_context(request: ModelRequest) -> str:
     """
 
 
-@after_agent
-def mimic_send_to_human(state: ServiceBotState, runtime):
-    output = runtime.agent_output.structured_response
-    report = {
-        "reason": output.reason,
-        "summary": output.summary,
-        "urgency": output.urgency,
-        "recommended_action": output.recommended_action,
-        "metadata": {
-            "sentiment": state.get("sentiment"),
-            "gathered_parameters": state.get("gathered_parameters"),
-            "gathered_information": state.get("gathered_information"),
-        },
-    }
-    # Call mock CRM queue tool to register the ticket
-    add_to_escalation_queue(report)
-    return {}
-
-
 @traceable(name="escalation_node")
 def escalation_node(state: ServiceBotState) -> Dict:
     """
@@ -90,7 +71,7 @@ def escalation_node(state: ServiceBotState) -> Dict:
         model=model,
         checkpointer=InMemorySaver(),
         response_format=EscalationResponse,
-        middleware=[inject_escalation_context, mimic_send_to_human],
+        middleware=[inject_escalation_context],
         context_schema=EscalationContext,
     )
 
@@ -106,6 +87,20 @@ def escalation_node(state: ServiceBotState) -> Dict:
     )
 
     escalation_output = response["structured_response"]
+
+    # Queue the escalation report directly
+    report = {
+        "reason": escalation_output.reason,
+        "summary": escalation_output.summary,
+        "urgency": escalation_output.urgency,
+        "recommended_action": escalation_output.recommended_action,
+        "metadata": {
+            "sentiment": state.get("sentiment"),
+            "gathered_parameters": state.get("gathered_parameters"),
+            "gathered_information": state.get("gathered_information"),
+        },
+    }
+    add_to_escalation_queue(report)
 
     return {
         "next_agent": "end",

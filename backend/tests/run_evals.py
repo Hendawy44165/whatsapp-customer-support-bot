@@ -107,7 +107,7 @@ def main():
     print()
 
     # Get dataset name and model name
-    dataset_name = "golden_dataset"
+    dataset_name = "evaluation_scenarios"
     model_name = os.getenv("PROVIDER_MODEL_NAME", "unknown-model")
     experiment_prefix = f"nuit-bot-correctness-{model_name.replace('/', '-')}"
 

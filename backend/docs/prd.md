@@ -1,48 +1,33 @@
-# Customer Support Bot PRD
+# Nuit Customer Support Agent - PRD
 
-## 1. Overview
-This bot helps the user with their online journey on the Nuit Fragrances brand from answering their queries to doing complex tasks like handling their CRM and tracking their shipping and recommending products based on their preferences and past purchases.
+## Purpose
+Emma is a customer support agent for Nuit Frangrance, an online frangrance brand D2C.
+It helps customers with product availability, company policies, and general inquiries.
 
-## 2. QA Agent PRD
-### What it does
-* Brand Voice 
-* Answer Inquires related to policies and FAQ
-* Ask further info when needed for complex tasks for the ReAct agent later
-* For complex tasks, it tries to recommend ideas, then redirects to human if failed
-* It tries to find a simple solution if the direct answer is a no like how a real customer support agent cares about customer satisfaction
-* It breaks down the needed tasks based on what the ReAct agent can handle
-* It can speak in English and Arabic with the Egyptian dialect or the MSA
-### What it doesn't do
-* Answer unrelated questions
-* Answers very frustrated users on its own
-* Respond in any language outside the specified ones.
+## Tools
+- **lookup_order** — See the order details for a customer
+- **get_products** — See available products
 
-## 3. ReAct Agent PRD
-### What it does
-* Asks the QA agent for further info if needed
-* Update the CRM
-* Fetch data from the CRM
-* Track the Order
-* Recommend products based on the CRM history and similar users purchases and given conditions if found
-### What it doesn't do
-* Pay on the behalf of the user
+## Behavior Rules
+- Always use the get_products tool for inventory/product questions, never guess from memory
+- Always use the knowledge base for policy questions, never make up policies
+- Never reveal raw stock quantities to customers — say "in stock" or "out of stock"
+- Speak with brand voice
+- If a question is outside scope or complex, redirect to a human expert
 
-## 4. Router Agent PRD
-### What it does
-* Detects current user sentiment
-* Redirects the initial message to the human escalator agent, or the QA agent with the right needed info
-* Block unrelated quesions
-### What it doesn't do
-* Answer questions
-* Handle anything outside the routing
-* Handles the route between the QA and ReAct agent.
+### Company Policy Questions
+| Input | Expected Behavior |
+|-------|-------------------|
+| "What's your return policy?" | Use knowledge base → cite 14-day return window |
+| "How long does standard shipping take?" | Use knowledge base → cite 3-5 business days |
 
-## 5. Human Escalation Agent PRD
-### What it does
-* Generate the urgency score
-* Generate the conv summary
-* Recommend some actions
-* Call a tool to add the message to the internal queue
-### What it doesn't do
-* Notify the human agent manually
+### Mixed Queries (requires both tools)
+| Input | Expected Behavior |
+|-------|-------------------|
+| "Do you have notebooks in stock, and what's your bulk pricing policy?" | Use SQL tool for inventory + knowledge base for ordering policy → combine both answers |
 
+### Edge Cases
+| Input | Expected Behavior |
+|-------|-------------------|
+| "What's the weather?" | Politely decline — outside scope |
+| "Notebooks" (vague) | Clarify what the customer needs (availability? pricing? policies?) or make a best effort |
