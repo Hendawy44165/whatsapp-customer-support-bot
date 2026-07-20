@@ -8,10 +8,10 @@ import {
   Sparkles
 } from 'lucide-react';
 import { getAnalyticsSummary } from './mockData';
-import { supabase } from './lib/supabaseClient';
 import Dashboard from './components/Dashboard';
 import Inspector from './components/Inspector';
 import Tickets from './components/Tickets';
+import LiveTicker from './components/LiveTicker';
 
 
 export default function App() {
@@ -23,44 +23,22 @@ export default function App() {
 
   const fetchConversations = async () => {
     try {
-      if (supabase) {
-        // Supabase path
-        const { data: convData } = await supabase
-          .from('conversations')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (Array.isArray(convData)) {
-          setConversations(convData);
-        }
-
-        const { data: ticketsData } = await supabase
-          .from('tickets')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (Array.isArray(ticketsData)) {
-          setTickets(ticketsData);
+      const res = await fetch('/api/conversations');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setConversations(data);
+          setIsBackendConnected(true);
         }
       } else {
-        // REST API fallback
-        const res = await fetch('/api/conversations');
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setConversations(data);
-          }
-          setIsBackendConnected(true);
-        } else {
-          setIsBackendConnected(false);
-        }
+        setIsBackendConnected(false);
+      }
 
-        const ticketsRes = await fetch('/api/tickets');
-        if (ticketsRes.ok) {
-          const data = await ticketsRes.json();
-          if (Array.isArray(data)) {
-            setTickets(data);
-          }
+      const ticketsRes = await fetch('/api/tickets');
+      if (ticketsRes.ok) {
+        const ticketsData = await ticketsRes.json();
+        if (Array.isArray(ticketsData)) {
+          setTickets(ticketsData);
         }
       }
     } catch (err) {
@@ -89,15 +67,7 @@ export default function App() {
 
   const handleResolveTicket = async (ticketId) => {
     try {
-      if (supabase) {
-        await supabase
-          .from('tickets')
-          .update({ status: 'resolved', resolved_at: new Date().toISOString() })
-          .eq('id', ticketId);
-      } else {
-        await fetch(`/api/tickets/${ticketId}/resolve`, { method: 'PATCH' });
-      }
-      // Refresh tickets after resolving
+      await fetch(`/api/tickets/${ticketId}/resolve`, { method: 'PATCH' });
       await fetchConversations();
     } catch (err) {
       // Optimistic update on failure — update local state directly
@@ -260,6 +230,8 @@ export default function App() {
           {activeTab === 'inspector' && <Inspector conversations={conversations} onReply={handleReplyToConversation} />}
           {activeTab === 'tickets' && <Tickets tickets={tickets} onResolve={handleResolveTicket} onReply={handleReplyToConversation} />}
         </div>
+
+        <LiveTicker conversations={conversations} />
 
       </main>
 

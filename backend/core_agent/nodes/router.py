@@ -20,8 +20,8 @@ class RouterResponse(BaseModel):
 
 @traceable
 def router_node(state: ServiceBotState) -> dict:
-    import structlog
-    logger = structlog.get_logger("router_node")
+    import logging
+    logger = logging.getLogger("router_node")
 
     model = get_model()
     system_prompt = load_prompt("router.md")

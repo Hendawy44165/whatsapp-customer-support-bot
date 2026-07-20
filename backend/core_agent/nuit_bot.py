@@ -21,10 +21,9 @@ from .nodes import (
 
 load_dotenv()
 
-import structlog
-from .guardrails import is_rate_limited, sanitize_output
+import logging
 
-logger = structlog.get_logger("nuit_bot")
+logger = logging.getLogger("nuit_bot")
 
 
 

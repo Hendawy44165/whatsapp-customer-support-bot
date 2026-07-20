@@ -1,9 +1,9 @@
 import os
-import structlog
+import logging
 from telebot.async_telebot import AsyncTeleBot
 from telebot import types
 
-logger = structlog.get_logger("telegram_client")
+logger = logging.getLogger("telegram_client")
 
 # Load token from environment
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or ""

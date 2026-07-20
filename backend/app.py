@@ -6,7 +6,7 @@ import datetime
 import threading
 import time
 from typing import Dict, Any, List, Optional
-import structlog
+import logging
 from fastapi import (
     FastAPI,
     UploadFile,
@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-logger = structlog.get_logger("unified_server")
+logger = logging.getLogger("unified_server")
 
 # Ensure backend folder is in path
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -622,6 +622,7 @@ async def get_conversations(search: Optional[str] = None):
             emotion = "neutral"
             failed_checks = []
 
+            metadata = {}
             if messages:
                 latest_msg = messages[-1]
                 if latest_msg.get("sentiment_data"):
@@ -634,6 +635,7 @@ async def get_conversations(search: Optional[str] = None):
                     if isinstance(s_data, dict):
                         emotion = s_data.get("vibe", "neutral")
                         intent = s_data.get("intent", "general_faq")
+                        metadata = s_data.get("metadata", {})
 
             audit_logs = [
                 f"Sync: Conversation sync channel via {c['platform']}",
@@ -649,6 +651,7 @@ async def get_conversations(search: Optional[str] = None):
                 "pending_handoff": "escalated",
                 "handed_off": "escalated",
                 "resolved": "resolved",
+                "manual_override": "manual_override",
             }
             fe_status = status_map.get(c["status"], c["status"])
 
@@ -691,6 +694,7 @@ async def get_conversations(search: Optional[str] = None):
                     "auditLogs": audit_logs,
                     "failedChecks": failed_checks,
                     "handoffSummary": c.get("handoff_summary") or "",
+                    "metadata": metadata
                 }
             )
 
@@ -698,6 +702,41 @@ async def get_conversations(search: Optional[str] = None):
     except Exception as e:
         db.add_system_log(
             "dashboard_server",
+            "ERROR",
+            f"Failed to fetch conversations: {str(e)}",
+        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/api/conversations/{conversation_id}/takeover")
+async def toggle_conversation_takeover(conversation_id: str, request: Request):
+    """Toggle conversation mode between automated AI and manual human takeover."""
+    try:
+        body = await request.json()
+        status = body.get("status", "manual_override")
+        
+        conn = db.get_connection() if hasattr(db, "get_connection") else None
+        if not conn:
+            import sqlite3
+            conn = sqlite3.connect(db.sqlite_db_path)
+            
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE conversations SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (status, conversation_id)
+        )
+        conn.commit()
+        
+        db.add_system_log(
+            "dashboard_server",
+            "INFO",
+            f"Conversation {conversation_id} takeover status updated to {status}"
+        )
+        return {"status": "success", "conversation_id": conversation_id, "new_status": status}
+    except Exception as e:
+        db.add_system_log("dashboard_server", "ERROR", f"Failed to update takeover status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
             "ERROR",
             f"Failed to retrieve conversations list: {str(e)}",
         )

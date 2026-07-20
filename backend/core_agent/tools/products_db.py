@@ -79,8 +79,8 @@ def validate_select_query_only(sql_query: str) -> bool:
                 
         return True
     except Exception as e:
-        import structlog
-        structlog.get_logger("products_db").warning("validate_select_query_only failed", error=str(e), query=sql_query)
+        import logging
+        logging.getLogger("products_db").warning(f"validate_select_query_only failed: {str(e)} for query {sql_query}")
         return False
 
 

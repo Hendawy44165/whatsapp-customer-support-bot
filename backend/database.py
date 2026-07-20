@@ -1,10 +1,3 @@
-"""
-database.py – Local SQLite database client for the Nuit Fragrances Customer Support Bot.
-
-All public method signatures are preserved so that app.py requires no changes.
-All data is stored in a local SQLite file (default: local_supabase_sim.db).
-"""
-
 import os
 import sqlite3
 import json
@@ -14,11 +7,7 @@ import math
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 
-import structlog
-from logger_config import setup_logging
-
-setup_logging()
-logger = structlog.get_logger("database")
+logger = logging.getLogger("database")
 
 
 class DatabaseClient:
@@ -112,11 +101,10 @@ class DatabaseClient:
             ("reason", "TEXT"),
             ("urgency", "REAL"),
             ("recommended_action", "TEXT"),
-            ("metadata", "TEXT")
+            ("metadata", "TEXT"),
         ]:
             if col_name not in existing_cols:
                 cursor.execute(f"ALTER TABLE tickets ADD COLUMN {col_name} {col_type}")
-
 
         # 4. Products Table
         cursor.execute("""
@@ -525,8 +513,8 @@ class DatabaseClient:
     # -----------------------------------------------------------------------
 
     def add_system_log(self, source: str, level: str, message: str) -> None:
-        """Route system logs through structlog, which handles console output and batching to SQLite."""
-        log_logger = structlog.get_logger(source)
+        """Route system logs through standard logging and batch to SQLite."""
+        log_logger = logging.getLogger(source)
         level_upper = level.upper()
         if level_upper == "DEBUG":
             log_logger.debug(message)
@@ -752,12 +740,21 @@ class DatabaseClient:
         cursor = conn.cursor()
         try:
             cursor.execute("PRAGMA foreign_keys = ON;")
-            cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
-            cursor.execute("DELETE FROM tickets WHERE conversation_id = ?", (conversation_id,))
-            cursor.execute("DELETE FROM message_buffer WHERE conversation_id = ?", (conversation_id,))
+            cursor.execute(
+                "DELETE FROM messages WHERE conversation_id = ?", (conversation_id,)
+            )
+            cursor.execute(
+                "DELETE FROM tickets WHERE conversation_id = ?", (conversation_id,)
+            )
+            cursor.execute(
+                "DELETE FROM message_buffer WHERE conversation_id = ?",
+                (conversation_id,),
+            )
             cursor.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
             conn.commit()
-            logger.info("Deleted conversation and associated data for id: %s", conversation_id)
+            logger.info(
+                "Deleted conversation and associated data for id: %s", conversation_id
+            )
             return True
         except Exception as e:
             logger.error("delete_conversation failed: %s", e)
@@ -790,7 +787,9 @@ class DatabaseClient:
             conn.close()
         return self.get_conversation(conversation_id)
 
-    def get_conversations(self, search_query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_conversations(
+        self, search_query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Return all conversations, optionally filtered by search_query, newest first."""
         conn = sqlite3.connect(self.sqlite_db_path)
         conn.row_factory = sqlite3.Row
@@ -809,7 +808,16 @@ class DatabaseClient:
                        OR m.content LIKE ?
                     ORDER BY c.created_at DESC
                 """
-                cursor.execute(query, (like_pattern, like_pattern, like_pattern, like_pattern, like_pattern))
+                cursor.execute(
+                    query,
+                    (
+                        like_pattern,
+                        like_pattern,
+                        like_pattern,
+                        like_pattern,
+                        like_pattern,
+                    ),
+                )
             else:
                 cursor.execute("SELECT * FROM conversations ORDER BY created_at DESC")
             convs = [dict(r) for r in cursor.fetchall()]
@@ -818,7 +826,6 @@ class DatabaseClient:
         finally:
             conn.close()
         return convs
-
 
     # -----------------------------------------------------------------------
     # Documents (RAG knowledge base)
@@ -1093,7 +1100,9 @@ class DatabaseClient:
             conn.close()
         return rows
 
-    def semantic_search_products(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def semantic_search_products(
+        self, query: str, limit: int = 5
+    ) -> List[Dict[str, Any]]:
         """Search products by description using a TF-IDF cosine-similarity model."""
         products = self.get_products()
         if not products:

@@ -138,8 +138,8 @@ def get_products() -> dict:
 
 @traceable
 def simple_qa_node(state: ServiceBotState) -> dict:
-    import structlog
-    logger = structlog.get_logger("simple_qa_node")
+    import logging
+    logger = logging.getLogger("simple_qa_node")
 
     kb_context = load_all_documents()
     model = get_model()

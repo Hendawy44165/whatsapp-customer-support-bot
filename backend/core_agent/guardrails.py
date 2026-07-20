@@ -1,11 +1,11 @@
 import re
 import time
 from typing import Any, Callable, Dict, List
-import structlog
+import logging
 
 from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
 
-logger = structlog.get_logger("guardrails")
+logger = logging.getLogger("guardrails")
 
 # In-memory store for rate limiting: thread_id -> list of timestamps
 _RATE_LIMIT_STORE: Dict[str, List[float]] = {}
@@ -38,7 +38,11 @@ def is_rate_limited(thread_id: str) -> bool:
         return False
 
     # Filter out timestamps older than the sliding window
-    history = [ts for ts in _RATE_LIMIT_STORE[thread_id] if now - ts <= RATE_LIMIT_WINDOW_SECONDS]
+    history = [
+        ts
+        for ts in _RATE_LIMIT_STORE[thread_id]
+        if now - ts <= RATE_LIMIT_WINDOW_SECONDS
+    ]
     _RATE_LIMIT_STORE[thread_id] = history
 
     if len(history) >= RATE_LIMIT_MAX_REQUESTS:
@@ -51,10 +55,10 @@ def is_rate_limited(thread_id: str) -> bool:
 def sanitize_output(text: str) -> str:
     """
     Scan the generated response for severe leakages of internal system details.
-    
+
     If system tags or JSON metric payloads are found, raises a ValueError
     to trigger immediate escalation.
-    
+
     Also sanitizes/removes common placeholder brackets.
     """
     if not text:
@@ -62,11 +66,15 @@ def sanitize_output(text: str) -> str:
 
     # 1. Check for prompt leakage or raw JSON metadata block leak
     if SYSTEM_TAGS_PATTERN.search(text) or JSON_METRICS_PATTERN.search(text):
-        raise ValueError("Severe safety warning: Generated response contained internal system tokens or JSON metrics.")
+        raise ValueError(
+            "Severe safety warning: Generated response contained internal system tokens or JSON metrics."
+        )
 
     # 2. Check for unresolved placeholders or TBD patterns
     if PLACEHOLDER_PATTERN.search(text):
-        raise ValueError("Safety check failure: Generated response contained unresolved placeholder brackets.")
+        raise ValueError(
+            "Safety check failure: Generated response contained unresolved placeholder brackets."
+        )
 
     return text
 
@@ -76,9 +84,10 @@ class NuitRateLimitingMiddleware(AgentMiddleware):
     LangChain agent middleware that checks rate limits before agent starts execution.
     Raises a ValueError if the rate limit is exceeded.
     """
+
     def before_agent(self, state: Any, runtime: Any) -> Any:
         from langgraph.config import get_config
-        
+
         try:
             config = get_config()
             thread_id = config.get("configurable", {}).get("thread_id", "default")
@@ -86,7 +95,9 @@ class NuitRateLimitingMiddleware(AgentMiddleware):
             thread_id = "default"
 
         if is_rate_limited(thread_id):
-            logger.warning("Rate limit exceeded for thread in middleware", thread_id=thread_id)
+            logger.warning(
+                "Rate limit exceeded for thread in middleware", thread_id=thread_id
+            )
             raise ValueError("Rate limit exceeded")
 
 
@@ -95,10 +106,9 @@ class NuitOutputSanitizerMiddleware(AgentMiddleware):
     LangChain agent middleware that scans model responses for prompt leaks,
     placeholders, or JSON leakages. Raises ValueError if validation fails.
     """
+
     def wrap_model_call(
-        self,
-        request: ModelRequest,
-        handler: Callable[[ModelRequest], ModelResponse]
+        self, request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]
     ) -> ModelResponse:
         response = handler(request)
         if response.result:

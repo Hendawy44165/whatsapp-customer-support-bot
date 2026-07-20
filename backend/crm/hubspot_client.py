@@ -10,12 +10,11 @@ API Reference:
     Notes (Engagements): https://developers.hubspot.com/docs/api/crm/engagements
 """
 
-import os
-import structlog
+import logging
 import requests
 from typing import Optional
 
-logger = structlog.get_logger('hubspot_client')
+logger = logging.getLogger('hubspot_client')
 
 HUBSPOT_ACCESS_TOKEN = os.getenv('HUBSPOT_ACCESS_TOKEN', '')
 HUBSPOT_API_BASE = 'https://api.hubapi.com'
