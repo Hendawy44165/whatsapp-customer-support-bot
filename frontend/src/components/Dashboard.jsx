@@ -13,12 +13,70 @@ export default function Dashboard({ conversations }) {
   const summary = getAnalyticsSummary(conversations);
   const emotionCounts = getEmotionDistribution(conversations);
 
+  // Group conversations by day of the week
+  const dailyData = {
+    Mon: { clients: 0, handoffs: 0 },
+    Tue: { clients: 0, handoffs: 0 },
+    Wed: { clients: 0, handoffs: 0 },
+    Thu: { clients: 0, handoffs: 0 },
+    Fri: { clients: 0, handoffs: 0 },
+    Sat: { clients: 0, handoffs: 0 },
+    Sun: { clients: 0, handoffs: 0 }
+  };
+
+  conversations.forEach(c => {
+    if (!c.timestamp) return;
+    const date = new Date(c.timestamp);
+    const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayName = dayNames[dayIndex];
+    if (dailyData[dayName]) {
+      dailyData[dayName].clients += 1;
+      if (c.status === 'escalated') {
+        dailyData[dayName].handoffs += 1;
+      }
+    }
+  });
+
+  const rawMax = Math.max(...Object.values(dailyData).map(d => d.clients));
+  const maxVal = Math.max(4, Math.ceil(rawMax / 4) * 4);
+
+  // Calculate trend dynamically for Clients Contacted (Today vs Yesterday relative to newest DB entry)
+  let clientsTrend = "No comparison data";
+  let clientsTrendType = "neutral";
+
+  const timestamps = conversations.map(c => c.timestamp ? new Date(c.timestamp).getTime() : 0).filter(t => t > 0);
+  const latestTime = timestamps.length > 0 ? Math.max(...timestamps) : Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  const last24hCount = conversations.filter(c => {
+    if (!c.timestamp) return false;
+    const diff = latestTime - new Date(c.timestamp).getTime();
+    return diff >= 0 && diff <= oneDayMs;
+  }).length;
+
+  const prev24hCount = conversations.filter(c => {
+    if (!c.timestamp) return false;
+    const diff = latestTime - new Date(c.timestamp).getTime();
+    return diff > oneDayMs && diff <= 2 * oneDayMs;
+  }).length;
+
+  if (prev24hCount > 0) {
+    const pctChange = ((last24hCount - prev24hCount) / prev24hCount) * 100;
+    const sign = pctChange >= 0 ? "+" : "";
+    clientsTrend = `${sign}${pctChange.toFixed(1)}% vs yesterday`;
+    clientsTrendType = pctChange >= 0 ? "up" : "down";
+  } else if (last24hCount > 0) {
+    clientsTrend = `+${last24hCount} new today`;
+    clientsTrendType = "up";
+  }
+
   const kpis = [
     {
       title: "Clients Contacted",
       value: summary.totalClients,
-      trend: "+12.5% vs yesterday",
-      trendType: "up",
+      trend: clientsTrend,
+      trendType: clientsTrendType,
       icon: Users,
       color: "var(--accent-purple)"
     },
@@ -32,9 +90,9 @@ export default function Dashboard({ conversations }) {
     },
     {
       title: "Human Escalations",
-      value: summary.totalClients - Math.round(summary.totalClients * summary.successRate / 100),
+      value: conversations.filter(c => c.status === 'escalated').length,
       trend: `${summary.handoffRate}% handoff rate`,
-      trendType: "down",
+      trendType: summary.handoffRate > 20 ? "down" : "neutral",
       icon: TrendingDown,
       color: "var(--accent-red)"
     },
@@ -106,83 +164,29 @@ export default function Dashboard({ conversations }) {
 
           <div className="svg-chart-container" style={{ marginTop: '20px' }}>
             <div className="bar-chart-y-axis">
-              <span>8</span>
-              <span>6</span>
-              <span>4</span>
-              <span>2</span>
+              <span>{maxVal}</span>
+              <span>{maxVal * 3 / 4}</span>
+              <span>{maxVal / 2}</span>
+              <span>{maxVal / 4}</span>
               <span>0</span>
             </div>
             <div className="bar-chart-body">
-              {/* Mon */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '50%' }}>
-                  <div className="bar-tooltip">Clients: 4</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '12%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 1</div>
-                </div>
-                <span className="chart-bar-label">Mon</span>
-              </div>
-              {/* Tue */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '75%' }}>
-                  <div className="bar-tooltip">Clients: 6</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '25%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 2</div>
-                </div>
-                <span className="chart-bar-label">Tue</span>
-              </div>
-              {/* Wed */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '37%' }}>
-                  <div className="bar-tooltip">Clients: 3</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '0%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 0</div>
-                </div>
-                <span className="chart-bar-label">Wed</span>
-              </div>
-              {/* Thu */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '62%' }}>
-                  <div className="bar-tooltip">Clients: 5</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '12%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 1</div>
-                </div>
-                <span className="chart-bar-label">Thu</span>
-              </div>
-              {/* Fri */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '87%' }}>
-                  <div className="bar-tooltip">Clients: 7</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '25%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 2</div>
-                </div>
-                <span className="chart-bar-label">Fri</span>
-              </div>
-              {/* Sat */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '100%' }}>
-                  <div className="bar-tooltip">Clients: 8</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '12%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 1</div>
-                </div>
-                <span className="chart-bar-label">Sat</span>
-              </div>
-              {/* Sun */}
-              <div className="bar-item-wrapper">
-                <div className="chart-bar-pillar secondary" style={{ height: '87%' }}>
-                  <div className="bar-tooltip">Clients: 7</div>
-                </div>
-                <div className="chart-bar-pillar" style={{ height: '37%' }}>
-                  <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: 3</div>
-                </div>
-                <span className="chart-bar-label">Sun</span>
-              </div>
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                const d = dailyData[day];
+                const clientHeight = `${(d.clients / maxVal) * 100}%`;
+                const handoffHeight = `${(d.handoffs / maxVal) * 100}%`;
+                return (
+                  <div className="bar-item-wrapper" key={day}>
+                    <div className="chart-bar-pillar secondary" style={{ height: clientHeight }}>
+                      <div className="bar-tooltip">Clients: {d.clients}</div>
+                    </div>
+                    <div className="chart-bar-pillar" style={{ height: handoffHeight }}>
+                      <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: {d.handoffs}</div>
+                    </div>
+                    <span className="chart-bar-label">{day}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

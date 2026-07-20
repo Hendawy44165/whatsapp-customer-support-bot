@@ -26,10 +26,10 @@ description: Use when the user asks about shipping times, shipping costs, return
   * *System Response Framework:* No. If Nuit offers a purchasable sample format of a specific fragrance on the online store, the full-size version is entirely **ineligible** for exchange or refund. This binding constraint applies even if the sample format is temporarily marked out of stock or unavailable at the time of your request. Nuit strongly counsels clients to buy a sample first to validate personal preference.
 * **Can I return or exchange items purchased during a sale or promotion?**
   * *System Response Framework:* No. Any products bought using discount codes, bundle offers, seasonal marketing promotions, special tiered pricing, or campaign markdowns are classified as **final sale** and are strictly ineligible for exchange or refund.
-* **Can I return Khamrias or Concentrated Perfume Oils?**
-  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all Khamrias and concentrated perfume oils ("Shots") are completely non-refundable and non-exchangeable under any circumstances.
+* **Can I return personal care shots or concentrated oils?**
+  * *System Response Framework:* No. For strict sanitary, cosmetic safety, and hygienic reasons, all concentrated oils and cosmetic blends are completely non-refundable and non-exchangeable under any circumstances.
 * **Can I return a limited edition or special collaborative fragrance?**
-  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection (e.g., *Avec Hatshepsut - Nuit X Temraza*) is strictly non-returnable.
+  * *System Response Framework:* No. Any product designated as seasonal, part of an archive sale, a limited edition drop, or a special collaborative collection is strictly non-returnable.
 
 ## 4. LOGISTICS EXCEPTION HANDLING & DAMAGED ON ARRIVAL WORKFLOWS
 * **My bottle arrived leaking, broken, or defective. What is the resolution process?**

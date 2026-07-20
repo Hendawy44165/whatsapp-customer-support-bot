@@ -2,68 +2,128 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   MessageSquare, 
-  FileText, 
-  Settings as SettingsIcon, 
+  Ticket,
   RefreshCw,
   Coins,
   Sparkles
 } from 'lucide-react';
-import { mockConversations, getAnalyticsSummary } from './mockData';
+import { getAnalyticsSummary } from './mockData';
+import { supabase } from './lib/supabaseClient';
 import Dashboard from './components/Dashboard';
 import Inspector from './components/Inspector';
-import FileManager from './components/FileManager';
-import Settings from './components/Settings';
+import Tickets from './components/Tickets';
+
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [conversations, setConversations] = useState(mockConversations);
+  const [conversations, setConversations] = useState([]);
+  const [tickets, setTickets] = useState([]);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Check connection to FastAPI backend
-  const checkConnection = async () => {
-    try {
-      const res = await fetch('/api/documents');
-      setIsBackendConnected(res.ok);
-      return res.ok;
-    } catch (err) {
-      setIsBackendConnected(false);
-      return false;
-    }
-  };
-
   const fetchConversations = async () => {
     try {
-      const res = await fetch('/api/conversations');
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setConversations(data);
+      if (supabase) {
+        // Supabase path
+        const { data: convData } = await supabase
+          .from('conversations')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (Array.isArray(convData)) {
+          setConversations(convData);
+        }
+
+        const { data: ticketsData } = await supabase
+          .from('tickets')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (Array.isArray(ticketsData)) {
+          setTickets(ticketsData);
+        }
+      } else {
+        // REST API fallback
+        const res = await fetch('/api/conversations');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setConversations(data);
+          }
+          setIsBackendConnected(true);
+        } else {
+          setIsBackendConnected(false);
+        }
+
+        const ticketsRes = await fetch('/api/tickets');
+        if (ticketsRes.ok) {
+          const data = await ticketsRes.json();
+          if (Array.isArray(data)) {
+            setTickets(data);
+          }
         }
       }
     } catch (err) {
-      console.warn("Could not fetch conversations from server. Using mock data.");
+      console.warn('Could not fetch data from server. Using mock data.');
+      setIsBackendConnected(false);
     }
   };
 
   useEffect(() => {
-    const init = async () => {
-      const connected = await checkConnection();
-      if (connected) {
-        await fetchConversations();
-      }
-    };
-    init();
+    fetchConversations();
+
+    // Auto-refresh conversations and tickets every 5 seconds
+    const interval = setInterval(() => {
+      fetchConversations();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    const connected = await checkConnection();
-    if (connected) {
-      await fetchConversations();
-    }
+    await fetchConversations();
     await new Promise(r => setTimeout(r, 600)); // visual spin duration
     setRefreshing(false);
+  };
+
+  const handleResolveTicket = async (ticketId) => {
+    try {
+      if (supabase) {
+        await supabase
+          .from('tickets')
+          .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+          .eq('id', ticketId);
+      } else {
+        await fetch(`/api/tickets/${ticketId}/resolve`, { method: 'PATCH' });
+      }
+      // Refresh tickets after resolving
+      await fetchConversations();
+    } catch (err) {
+      // Optimistic update on failure — update local state directly
+      setTickets(prev =>
+        prev.map(t =>
+          t.id === ticketId
+            ? { ...t, status: 'resolved', resolved_at: new Date().toISOString() }
+            : t
+        )
+      );
+    }
+  };
+
+  const handleReplyToConversation = async (conversationId, replyText) => {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: replyText })
+      });
+      if (res.ok) {
+        await fetchConversations();
+      }
+    } catch (err) {
+      console.error('Error replying to conversation:', err);
+    }
   };
 
   const getSummary = getAnalyticsSummary(conversations);
@@ -71,9 +131,25 @@ export default function App() {
   const menuItems = [
     { id: 'dashboard', name: 'Overview Dashboard', icon: BarChart3 },
     { id: 'inspector', name: 'Client Conversations', icon: MessageSquare },
-    { id: 'files', name: 'Help Library & Docs', icon: FileText },
-    { id: 'settings', name: 'System Settings', icon: SettingsIcon }
+    { id: 'tickets', name: 'Escalation Tickets', icon: Ticket }
   ];
+
+  const headerContent = {
+    dashboard: {
+      title: 'Nuit Fragrances Concierge Dashboard',
+      subtitle: 'Monitor token rates, customer emotion classifications, and automated resolutions.'
+    },
+    inspector: {
+      title: 'Customer Session Auditor',
+      subtitle: 'Inspect conversation transcripts, social platform origin, and LangGraph audit trails.'
+    },
+    tickets: {
+      title: 'Escalation Ticket Queue',
+      subtitle: 'Review and resolve human-handoff escalations raised by the AI concierge.'
+    }
+  };
+
+  const currentHeader = headerContent[activeTab] || headerContent.dashboard;
 
   return (
     <div className="app-container">
@@ -140,21 +216,33 @@ export default function App() {
         {/* Header */}
         <header className="main-header">
           <div className="header-title-container">
-            <h1>
-              {activeTab === 'dashboard' && 'Nuit Fragrances Concierge Dashboard'}
-              {activeTab === 'inspector' && 'Customer Session Auditor'}
-              {activeTab === 'files' && 'Help Library & Docs'}
-              {activeTab === 'settings' && 'System Configuration & Settings'}
-            </h1>
-            <p>
-              {activeTab === 'dashboard' && 'Monitor token rates, customer emotion classifications, and automated resolutions.'}
-              {activeTab === 'inspector' && 'Inspect conversation transcripts, social platform origin, and LangGraph audit trails.'}
-              {activeTab === 'files' && 'Manage static instructions and upload custom guidelines to the chatbot reference registry.'}
-              {activeTab === 'settings' && 'Configure active models, temperature parameters, API credentials, and default instructions.'}
-            </p>
+            <h1>{currentHeader.title}</h1>
+            <p>{currentHeader.subtitle}</p>
           </div>
 
           <div className="header-actions">
+            <button 
+              onClick={handleRefresh}
+              className={`header-badge refresh-button ${refreshing ? 'spin-loader' : ''}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(0, 0, 0, 0.04)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                color: '#686256',
+                cursor: 'pointer',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                outline: 'none'
+              }}
+            >
+              <RefreshCw size={12} className={refreshing ? 'spin-loader' : ''} />
+              <span>Refresh</span>
+            </button>
             <span className="header-badge" style={{ color: 'var(--accent-orange)' }}>
               <Coins />
               <span>Avg Cost: ${getSummary.avgCost.toFixed(5)}</span>
@@ -169,9 +257,8 @@ export default function App() {
         {/* Content Body */}
         <div className="content-body">
           {activeTab === 'dashboard' && <Dashboard conversations={conversations} />}
-          {activeTab === 'inspector' && <Inspector conversations={conversations} />}
-          {activeTab === 'files' && <FileManager />}
-          {activeTab === 'settings' && <Settings />}
+          {activeTab === 'inspector' && <Inspector conversations={conversations} onReply={handleReplyToConversation} />}
+          {activeTab === 'tickets' && <Tickets tickets={tickets} onResolve={handleResolveTicket} onReply={handleReplyToConversation} />}
         </div>
 
       </main>

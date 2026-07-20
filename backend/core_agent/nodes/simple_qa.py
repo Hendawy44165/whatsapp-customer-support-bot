@@ -138,31 +138,67 @@ def get_products() -> dict:
 
 @traceable
 def simple_qa_node(state: ServiceBotState) -> dict:
+    import structlog
+    logger = structlog.get_logger("simple_qa_node")
+
     kb_context = load_all_documents()
-
     model = get_model()
-    qa_agent = create_agent(
-        model=model,
-        tools=[query_products_sql, get_product_details, search_products_by_description, lookup_order],
-        checkpointer=InMemorySaver(),
-        middleware=[inject_context],
-        response_format=QaResponse,
-        context_schema=QaContext,
-    )
 
-    context = QaContext(
-        sentiment=state.get("sentiment", "neutral"),
-        kb_context=kb_context,
-    )
+    try:
+        from ..guardrails import NuitRateLimitingMiddleware, NuitOutputSanitizerMiddleware
+        from langchain.agents.middleware import ModelRetryMiddleware
 
-    response = qa_agent.invoke(
-        {"messages": state["messages"]},
-        context=context,
-    )
+        qa_agent = create_agent(
+            model=model,
+            tools=[query_products_sql, get_product_details, search_products_by_description, lookup_order],
+            checkpointer=InMemorySaver(),
+            middleware=[
+                NuitRateLimitingMiddleware(),
+                inject_context,
+                ModelRetryMiddleware(max_retries=3, on_failure="error"),
+                NuitOutputSanitizerMiddleware(),
+            ],
+            response_format=QaResponse,
+            context_schema=QaContext,
+        )
 
-    qa_output = response["structured_response"]
+        context = QaContext(
+            sentiment=state.get("sentiment", "neutral"),
+            kb_context=kb_context,
+        )
 
-    return {
-        "messages": [AIMessage(content=qa_output.user_response or "")],
-        "next_agent": "end",
-    }
+        response = qa_agent.invoke(
+            {"messages": state["messages"]},
+            context=context,
+        )
+
+        qa_output = response["structured_response"]
+
+        return {
+            "messages": [AIMessage(content=qa_output.user_response or "")],
+            "next_agent": "end",
+        }
+    except Exception as e:
+        if isinstance(e, ValueError) and "rate limit" in str(e).lower():
+            raise
+
+        logger.error(
+            "Simple QA node failure: error during QA execution or tool execution",
+            error=str(e),
+        )
+        try:
+            from database import db
+            db.add_system_log(
+                "simple_qa_node",
+                "ERROR",
+                f"Simple QA node failed: {str(e)}"
+            )
+        except Exception:
+            pass
+
+        return {
+            "next_agent": "escalate",
+            "is_handoff": True,
+            "handoff_summary": f"System error in simple_qa node: {str(e)}",
+            "messages": [AIMessage(content="Connecting you to a support specialist...")],
+        }

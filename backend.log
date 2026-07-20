@@ -1,0 +1,229 @@
+{"positional_args": ["/home/hendawy/Documents/career/projects/customer-support-bot/backend/local_supabase_sim.db"], "event": "DatabaseClient: Initialising local SQLite DB at: %s", "level": "info", "logger": "database", "timestamp": "2026-07-20T13:20:46.981278Z"}
+INFO:     Started server process [146053]
+INFO:     Waiting for application startup.
+{"event": "Initializing unified backend server lifespan resources", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:20:47.145836Z"}
+{"event": "Outbound queue worker started.", "level": "info", "logger": "outbound_worker", "timestamp": "2026-07-20T13:20:47.146238Z"}
+{"event": "Outbound queue worker thread started via lifespan.", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:20:47.146359Z"}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57490 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57504 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57516 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57532 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57542 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57550 - "GET /api/tickets HTTP/1.1" 200 OK
+{"event": "Received message from chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:20:54.636584Z"}
+{"event": "Executing /clear command for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:20:54.636730Z"}
+{"thread_id": "tg_1483461171", "event": "Reset memory saver state for thread_id", "level": "info", "logger": "nuit_bot", "timestamp": "2026-07-20T13:20:54.636789Z"}
+{"positional_args": ["tg_1483461171"], "event": "Deleted conversation and associated data for id: %s", "level": "info", "logger": "database", "timestamp": "2026-07-20T13:20:54.645374Z"}
+INFO:     91.108.5.147:0 - "POST /webhook/telegram HTTP/1.1" 200 OK
+{"chat_id": "1483461171", "deleted_count": 13, "event": "Cleared Telegram UI messages", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:20:54.945173Z"}
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:20:55.086523Z"}
+{"event": "Completed /clear command for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:20:55.086752Z"}
+INFO:     127.0.0.1:50452 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50456 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50470 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50480 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44870 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44872 - "GET /api/tickets HTTP/1.1" 200 OK
+{"event": "Received message from chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:09.361137Z"}
+HTTP Request: POST https://models.github.ai/inference/chat/completions "HTTP/1.1 200 OK"
+HTTP Request: POST https://models.github.ai/inference/chat/completions "HTTP/1.1 200 OK"
+INFO:     91.108.5.147:0 - "POST /webhook/telegram HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44876 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44888 - "GET /api/tickets HTTP/1.1" 200 OK
+{"ticket_id": 10, "event": "Resolving escalation ticket", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:21:14.616890Z"}
+{"event": "Ticket 10 resolved.", "level": "info", "logger": "dashboard_server", "timestamp": "2026-07-20T13:21:14.627772Z"}
+INFO:     127.0.0.1:44890 - "PATCH /api/tickets/10/resolve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44904 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44908 - "GET /api/tickets HTTP/1.1" 200 OK
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:21:14.657460Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:14.657662Z"}
+{"positional_args": ["tg_1483461171", "Amr Hendawy"], "event": "[STUB] upsert_contact called for phone=%s name=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:14.657740Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:14.657778Z"}
+{"positional_args": ["stub_contact_id", "Escalation: The customer received order #3021 broken and expressed anger using a"], "event": "[STUB] log_note called for contact=%s body=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:14.657809Z"}
+{"event": "Escalation ticket created for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:14.657850Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:14.657883Z"}
+{"positional_args": ["tg_1483461171", "Amr Hendawy"], "event": "[STUB] upsert_contact called for phone=%s name=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:14.657911Z"}
+INFO:     127.0.0.1:36798 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36814 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36822 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36834 - "GET /api/tickets HTTP/1.1" 200 OK
+{"event": "Received message from chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:25.331034Z"}
+{"event": "Executing /clear command for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:25.331184Z"}
+{"thread_id": "tg_1483461171", "event": "Reset memory saver state for thread_id", "level": "info", "logger": "nuit_bot", "timestamp": "2026-07-20T13:21:25.331248Z"}
+{"positional_args": ["tg_1483461171"], "event": "Deleted conversation and associated data for id: %s", "level": "info", "logger": "database", "timestamp": "2026-07-20T13:21:25.333606Z"}
+INFO:     91.108.5.147:0 - "POST /webhook/telegram HTTP/1.1" 200 OK
+{"chat_id": "1483461171", "deleted_count": 4, "event": "Cleared Telegram UI messages", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:21:26.491880Z"}
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:21:26.603406Z"}
+{"event": "Completed /clear command for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:26.603568Z"}
+INFO:     127.0.0.1:47632 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47634 - "GET /api/tickets HTTP/1.1" 200 OK
+{"ticket_id": 7, "event": "Resolving escalation ticket", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:21:30.552226Z"}
+{"event": "Ticket 7 resolved.", "level": "info", "logger": "dashboard_server", "timestamp": "2026-07-20T13:21:30.562694Z"}
+INFO:     127.0.0.1:47648 - "PATCH /api/tickets/7/resolve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47656 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47664 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47676 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47680 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51040 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51056 - "GET /api/tickets HTTP/1.1" 200 OK
+{"event": "Received message from chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:40.168385Z"}
+HTTP Request: POST https://models.github.ai/inference/chat/completions "HTTP/1.1 200 OK"
+HTTP Request: POST https://models.github.ai/inference/chat/completions "HTTP/1.1 200 OK"
+INFO:     91.108.5.147:0 - "POST /webhook/telegram HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51068 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51074 - "GET /api/tickets HTTP/1.1" 200 OK
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:21:44.993283Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:44.993429Z"}
+{"positional_args": ["tg_1483461171", "Amr Hendawy"], "event": "[STUB] upsert_contact called for phone=%s name=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:44.993468Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:44.993503Z"}
+{"positional_args": ["stub_contact_id", "Escalation: The customer reports that their order 3021 arrived broken and is see"], "event": "[STUB] log_note called for contact=%s body=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:44.993533Z"}
+{"event": "Escalation ticket created for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:21:44.993588Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:44.993625Z"}
+{"positional_args": ["tg_1483461171", "Amr Hendawy"], "event": "[STUB] upsert_contact called for phone=%s name=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:21:44.993653Z"}
+INFO:     127.0.0.1:32970 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32982 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32986 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32988 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33000 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33004 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52636 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52638 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52640 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52654 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42756 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42762 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42772 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42778 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59664 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59674 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59678 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59684 - "GET /api/tickets HTTP/1.1" 200 OK
+{"conversation_id": "tg_1483461171", "message": "i am sorry to hear that. do u wanna replace it with another bottle or return it?", "event": "Human replying to conversation", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:22:24.348122Z"}
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:22:24.607468Z"}
+{"event": "Manual reply sent to conversation tg_1483461171", "level": "info", "logger": "dashboard_server", "timestamp": "2026-07-20T13:22:24.607636Z"}
+INFO:     127.0.0.1:59692 - "POST /api/conversations/tg_1483461171/reply HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59704 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59708 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56062 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56070 - "GET /api/tickets HTTP/1.1" 200 OK
+{"event": "Received message from chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:22:31.649944Z"}
+{"event": "Customer message from chat 1483461171 saved to DB and redirected to human review (status=handed_off).", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:22:31.659374Z"}
+INFO:     91.108.5.147:0 - "POST /webhook/telegram HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56080 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56086 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33226 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33242 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33246 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33250 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33782 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33794 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33802 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33812 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33428 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33438 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33446 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33450 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42014 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42026 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42030 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42032 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35016 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35018 - "GET /api/tickets HTTP/1.1" 200 OK
+{"conversation_id": "tg_1483461171", "message": "ok, someone will come to u with another bottle and u give back the broken one.", "event": "Human replying to conversation", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:23:22.550209Z"}
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:23:22.817218Z"}
+{"event": "Manual reply sent to conversation tg_1483461171", "level": "info", "logger": "dashboard_server", "timestamp": "2026-07-20T13:23:22.817385Z"}
+INFO:     127.0.0.1:35032 - "POST /api/conversations/tg_1483461171/reply HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35040 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35056 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35062 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35078 - "GET /api/tickets HTTP/1.1" 200 OK
+{"ticket_id": 11, "event": "Resolving escalation ticket", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:23:27.919099Z"}
+{"event": "Ticket 11 resolved.", "level": "info", "logger": "dashboard_server", "timestamp": "2026-07-20T13:23:27.930128Z"}
+INFO:     127.0.0.1:49444 - "PATCH /api/tickets/11/resolve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49454 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49468 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49482 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49490 - "GET /api/tickets HTTP/1.1" 200 OK
+{"event": "Received message from chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:23:32.523105Z"}
+HTTP Request: POST https://models.github.ai/inference/chat/completions "HTTP/1.1 200 OK"
+HTTP Request: POST https://models.github.ai/inference/chat/completions "HTTP/1.1 200 OK"
+INFO:     91.108.5.147:0 - "POST /webhook/telegram HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49510 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49512 - "GET /api/tickets HTTP/1.1" 200 OK
+{"chat_id": "1483461171", "event": "Telegram message sent successfully", "level": "info", "logger": "telegram_client", "timestamp": "2026-07-20T13:23:36.495724Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:23:36.495951Z"}
+{"positional_args": ["tg_1483461171", "Amr Hendawy"], "event": "[STUB] upsert_contact called for phone=%s name=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:23:36.496023Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:23:36.496075Z"}
+{"positional_args": ["stub_contact_id", "Escalation: The customer reports that their order 3021 arrived broken and is see"], "event": "[STUB] log_note called for contact=%s body=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:23:36.496127Z"}
+{"event": "Escalation ticket created for chat 1483461171", "level": "info", "logger": "telegram_webhook", "timestamp": "2026-07-20T13:23:36.496198Z"}
+{"event": "[STUB] HubSpot not configured. Set HUBSPOT_ACCESS_TOKEN in .env.", "level": "warning", "logger": "hubspot_client", "timestamp": "2026-07-20T13:23:36.496245Z"}
+{"positional_args": ["tg_1483461171", "Amr Hendawy"], "event": "[STUB] upsert_contact called for phone=%s name=%s", "level": "info", "logger": "hubspot_client", "timestamp": "2026-07-20T13:23:36.496288Z"}
+INFO:     127.0.0.1:34600 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34608 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34624 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34630 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47976 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47986 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47988 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47994 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36068 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36078 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36092 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36098 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45360 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45368 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45370 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45374 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52084 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52098 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52100 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52112 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44424 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44440 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44456 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44468 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38778 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38786 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38788 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38804 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39352 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39366 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39374 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39378 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51896 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51900 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51904 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51908 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57750 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57758 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57768 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57774 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40588 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40594 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33910 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33924 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33936 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33946 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45904 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45908 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45916 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45924 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39488 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39500 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39512 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39514 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54910 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54916 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54932 - "GET /api/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54940 - "GET /api/tickets HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+{"event": "Shutting down unified backend server lifespan resources", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:26:10.005862Z"}
+{"event": "Outbound queue worker thread stopped.", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:26:11.216783Z"}
+INFO:     Application shutdown complete.
+INFO:     Finished server process [146053]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          {"event": "Outbound queue worker thread stopped.", "level": "info", "logger": "unified_server", "timestamp": "2026-07-20T13:20:46.708341Z"}
+INFO:     Application shutdown complete.
+INFO:     Finished server process [138201]

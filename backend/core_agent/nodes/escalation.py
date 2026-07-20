@@ -107,4 +107,5 @@ def escalation_node(state: ServiceBotState) -> Dict:
         "messages": [
             AIMessage(content=escalation_output.ticket_response or HANDOFF_MESSAGE)
         ],
+        "escalation_report": report,
     }

@@ -20,21 +20,55 @@ class RouterResponse(BaseModel):
 
 @traceable
 def router_node(state: ServiceBotState) -> dict:
+    import structlog
+    logger = structlog.get_logger("router_node")
+
     model = get_model()
     system_prompt = load_prompt("router.md")
 
-    router_agent = create_agent(
-        model=model,
-        system_prompt=system_prompt,
-        checkpointer=InMemorySaver(),
-        response_format=RouterResponse,
-    )
+    try:
+        from ..guardrails import NuitRateLimitingMiddleware, NuitOutputSanitizerMiddleware
+        from langchain.agents.middleware import ModelRetryMiddleware
 
-    response = router_agent.invoke({"messages": state["messages"]})
+        router_agent = create_agent(
+            model=model,
+            system_prompt=system_prompt,
+            checkpointer=InMemorySaver(),
+            response_format=RouterResponse,
+            middleware=[
+                NuitRateLimitingMiddleware(),
+                ModelRetryMiddleware(max_retries=3, on_failure="error"),
+                NuitOutputSanitizerMiddleware(),
+            ],
+        )
 
-    router_output = response["structured_response"]
+        response = router_agent.invoke({"messages": state["messages"]})
+        router_output = response["structured_response"]
 
-    return {
-        "next_agent": router_output.next_agent,
-        "sentiment": router_output.sentiment,
-    }
+        return {
+            "next_agent": router_output.next_agent,
+            "sentiment": router_output.sentiment,
+        }
+    except Exception as e:
+        if isinstance(e, ValueError) and "rate limit" in str(e).lower():
+            raise
+
+        logger.error(
+            "Router node failure: unable to classify user input or parse response",
+            error=str(e),
+            messages=[getattr(m, "content", str(m)) for m in state["messages"][-3:]],
+        )
+        try:
+            from database import db
+            db.add_system_log(
+                "router_node",
+                "ERROR",
+                f"Router node execution failed: {str(e)}"
+            )
+        except Exception:
+            pass
+
+        return {
+            "next_agent": "escalate",
+            "sentiment": "neutral",
+        }

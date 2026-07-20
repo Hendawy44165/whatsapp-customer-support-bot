@@ -10,7 +10,8 @@ import {
   MessageSquare,
   AlertTriangle,
   Send,
-  MessageCircle
+  MessageCircle,
+  RefreshCw
 } from 'lucide-react';
 
 // Custom lightweight Markdown renderer to parse lists and **bold** text in the client portal
@@ -77,24 +78,69 @@ function MarkdownText({ text }) {
   );
 }
 
-export default function Inspector({ conversations }) {
-  const [selectedId, setSelectedId] = useState(conversations[0]?.id || "");
+export default function Inspector({ conversations, onReply }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [localConversations, setLocalConversations] = useState(conversations);
+  const [selectedId, setSelectedId] = useState(conversations[0]?.id || "");
+  const [loading, setLoading] = useState(false);
+  const [replyText, setReplyText] = useState("");
 
-  const selectedThread = conversations.find(c => c.id === selectedId);
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !onReply) return;
+    await onReply(selectedId, replyText);
+    setReplyText("");
+  };
 
-  // Filter conversations based on search
-  const filteredConversations = conversations.filter(c => {
-    const term = searchTerm.toLowerCase();
-    return (
-      c.customerName.toLowerCase().includes(term) ||
-      c.phoneNumber.includes(term) ||
-      c.intent.toLowerCase().includes(term) ||
-      c.emotion.toLowerCase().includes(term) ||
-      c.status.toLowerCase().includes(term) ||
-      c.channel.toLowerCase().includes(term)
-    );
-  });
+
+  // Sync localConversations when the main conversations list changes (e.g. background polling or refresh)
+  React.useEffect(() => {
+    if (!searchTerm.trim()) {
+      setLocalConversations(conversations);
+    }
+  }, [conversations, searchTerm]);
+
+  // Fetch search results from the database with debounce
+  React.useEffect(() => {
+    if (!searchTerm.trim()) {
+      setLocalConversations(conversations);
+      return;
+    }
+
+    const fetchSearch = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/conversations?search=${encodeURIComponent(searchTerm)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLocalConversations(data);
+        }
+      } catch (err) {
+        console.error("Failed searching database:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchSearch();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, conversations]);
+
+  // Adjust selection when the filtered list changes
+  React.useEffect(() => {
+    if (localConversations.length > 0) {
+      const exists = localConversations.some(c => c.id === selectedId);
+      if (!exists) {
+        setSelectedId(localConversations[0].id);
+      }
+    } else {
+      setSelectedId("");
+    }
+  }, [localConversations, selectedId]);
+
+  const selectedThread = localConversations.find(c => c.id === selectedId);
 
   // Color mapping/labels for platform channels
   const getChannelLabel = (channel) => {
@@ -112,7 +158,11 @@ export default function Inspector({ conversations }) {
       {/* Sidebar List */}
       <div className="glass-panel threads-sidebar">
         <div className="search-input-wrapper">
-          <Search />
+          {loading ? (
+            <RefreshCw size={16} className="spin-loader" style={{ color: 'var(--accent-orange)' }} />
+          ) : (
+            <Search size={16} />
+          )}
           <input 
             type="text" 
             placeholder="Search by client, channel, vibe..." 
@@ -123,13 +173,13 @@ export default function Inspector({ conversations }) {
         </div>
 
         <div className="threads-list">
-          {filteredConversations.length === 0 ? (
+          {localConversations.length === 0 ? (
             <div className="empty-state">
               <MessageSquare />
               <p>No conversations found</p>
             </div>
           ) : (
-            filteredConversations.map(c => {
+            localConversations.map(c => {
               const lastMessage = c.messages[c.messages.length - 1]?.text || "";
               const isActive = c.id === selectedId;
               
@@ -192,7 +242,7 @@ export default function Inspector({ conversations }) {
             </div>
 
             {/* Plain text bubbles - no markdown parsing in chat history */}
-            <div className="chat-messages-scroller">
+            <div className="chat-messages-scroller" style={{ flex: 1, overflowY: 'auto' }}>
               {selectedThread.messages.map((m, idx) => (
                 <div key={idx} className={`chat-message-bubble ${m.sender}`}>
                   <span className="message-sender-name">
@@ -204,6 +254,58 @@ export default function Inspector({ conversations }) {
                   <span className="message-timestamp">{m.timestamp}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Chat Reply Input Bar */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              padding: '16px 20px',
+              borderTop: '1px solid var(--border-color)',
+              background: 'var(--bg-secondary)',
+              alignItems: 'center'
+            }}>
+              <input
+                type="text"
+                placeholder="Type manual response to send..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSendReply();
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: '#FFF',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                  color: '#2C2B29'
+                }}
+              />
+              <button
+                onClick={handleSendReply}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 18px',
+                  background: 'var(--accent-orange)',
+                  color: '#FFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Send size={14} />
+                Send
+              </button>
             </div>
           </div>
 

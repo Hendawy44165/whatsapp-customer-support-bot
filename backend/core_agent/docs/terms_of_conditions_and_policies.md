@@ -6,35 +6,11 @@ description: Use when verifying exact product variant lists, pricing tiers, deta
 # Document Control ID: NUIT-KB-01B-2026 | Data Classification: Internal Context Asset
 # Ground Truth Source: Official Nuit Fragrances Terms and Conditions & Refund Policies
 
-## 1. PRODUCT CATALOG & PRICING MATRIX
-The following ledger represents the absolute ground-truth matrix for active products, exact sizing, olfactory note architectures, and structural pricing tiers within the retrieval database:
+## 1. PRODUCT CATALOG & PRICING MANDATE
+Product names, fragrance variants, scent profiles, olfactory notes, packaging sizes, and pricing structures are strictly excluded from these reference documents to guarantee real-time accuracy. 
 
-### 1.1 Flagship Eau de Parfum (EDP) Collection
-* **Physical Specifications:** 50ml Heavyweight Bespoke Glass Flacons. High essential oil persistence profiles.
-* **Standard Base MSRP:** EGP 855.00 (All taxes inclusive).
-* **Standard Active Campaign / Promotional Price Tier:** EGP 599.00 (All taxes inclusive).
-* **Active Fragrance Variants & Scent Ledger:**
-  * `Rum`: A warm, spicy, and highly persistent oriental unisex formulation. Features note layers of rich chocolate, authentic sweet date accords, sharp cinnamon, warm amber, and heavy tonka bean.
-  * `Dulce de Leche`: A rich, highly indulgent, sweet gourmand-tier olfactory profile mimicking caramelized milk and sweet vanilla depths.
-  * `Head Turner`: A signature, highly projecting clean-fresh scent configuration engineered for extreme sillage and high physical longevity.
-  * `Born in Milano`: A premium, contemporary urban fresh-aromatic blend combining classic Italian citrus top notes with modern clean woods.
-  * `Born in Vegas`: A bold, modern nocturnal woody blend with rich resinous base notes designed for evening wear.
-  * `Bounty Hunter`: A powerful, highly assertive masculine/unisex leather-woody accord featuring rugged smoke and dark wood elements.
-  * `Red Flag`: A highly specialized, avant-garde contemporary conceptual scent profile crafted for niche fragrance enthusiasts.
-  * `Green Flag`: A bright, crisp, highly energetic contemporary blend utilizing clean herbaceous elements and vibrant citrus oils.
-  * `Espresso Martini`, `Forbidden Fruit`, `Casa Di Rosa`, `Lindo Día`, `Monroe`, `Warm Vanilla`, `French Foulard`, `True Hipster`, `Leather Jacket`, `Cappuccina`, `Choco Frappe`, `Hazelwood`, `Heritage`, `I am Harvey`
-
-### 1.2 Luxury Collaboration & Specialty Series
-* `Avec Hatshepsut - Nuit X Temraza`: An ultra-premium, high-concept luxury haute design crossover variant developed in collaboration with the renowned fashion house Temraza. Housed in a completely exclusive art flacon.
-  * **Retail MSRP:** EGP 1,950.00 (Fixed pricing tier; strictly excluded from standard EDP campaign discounts).
-
-### 1.3 Concentrated Perfume Products ("Shots") & Khamrias
-* **Physical Specifications:** Pocket-sized high-concentration delivery systems containing pure raw essential perfume oils and traditional hair/skin formulation blends (Khamrias). Designed for direct, highly localized application to primary bodily pulse points.
-  * **Retail MSRP:** EGP 475.00 base pricing. Examples: *Vanilla Shot*, *Born in Milano Shot*, *Caramel Shot*, *Head Turner Shot*.
-
-### 1.4 Premium Body Splash & Personal Care Mists
-* **Physical Specifications:** Lightweight, fine-mist delivery sprays engineered to be entirely skin-safe and safe for delicate premium textile/fabric application.
-  * **Retail MSRP:** EGP 315.00 base pricing. Examples: *Soft Cloud Heart*, *Very Delicate Vanilla*, *The Harvey Splash*.
+**MANDATORY TOOL EXECUTION RULE:**
+To answer any customer inquiry regarding products, scents, fragrance recommendations, note profiles, pricing, or product availability, you MUST ALWAYS query the live product database using your tools (`query_products_sql`, `get_product_details`, `search_products_by_description`). Do NOT assume or invent product details without making a tool call.
 
 ## 2. SUPPLY CHAIN LOGISTICS, TIMELINES & SHIPPING TIERS
 * **Geographic Fulfillment Limitation:** Nuit focuses operations strictly within the domestic Egyptian market. The brand does **not** process, fulfill, or ship orders internationally outside of Egypt.

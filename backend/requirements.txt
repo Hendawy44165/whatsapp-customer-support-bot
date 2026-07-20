@@ -8,7 +8,6 @@ langsmith
 langchain
 fastapi
 uvicorn
-supabase
 mcp
 sse-starlette
 httpx

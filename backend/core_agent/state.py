@@ -44,3 +44,4 @@ class ServiceBotState(AgentState):
     gathered_parameters: dict
     gathered_information: list
     extracted_parameters: dict
+    escalation_report: Optional[dict]

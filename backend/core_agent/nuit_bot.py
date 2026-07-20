@@ -1,3 +1,4 @@
+import json
 from typing import Dict
 
 from langgraph.graph import StateGraph, END
@@ -20,6 +21,12 @@ from .nodes import (
 
 load_dotenv()
 
+import structlog
+from .guardrails import is_rate_limited, sanitize_output
+
+logger = structlog.get_logger("nuit_bot")
+
+
 
 class NuitBot:
     """
@@ -32,7 +39,7 @@ class NuitBot:
         self.graph = self.compile_graph(checkpointer=self.memory)
 
     @traceable(name="send_message")
-    def send_message(self, message: str, thread_id: str = "default"):
+    def send_message(self, message: str, thread_id: str = "default") -> dict:
         """
         Send a user message through the graph pipeline.
 
@@ -41,46 +48,197 @@ class NuitBot:
             thread_id: UUID session ID for thread persistence.
 
         Returns:
-            The final response string to send to the user.
+            A structured dict describing the agent's output. Shape:
+            - {"type": "ai_reply",         "message": str, "sentiment": str, "intent": str}
+            - {"type": "escalation_ticket", "message": str, "summary": str, "sentiment": str, "intent": str}
+            - {"type": "blocked",           "message": str}
+            - {"type": "error",             "message": str, "error": str}
         """
-
         config = {"configurable": {"thread_id": thread_id}}
+        input_data = {"messages": [HumanMessage(content=message)]}
 
-        input = {
-            "messages": [HumanMessage(content=message)],
-        }
+        try:
+            response = self.graph.invoke(input=input_data, config=config)
+            raw_content = response["messages"][-1].content
 
-        response = self.graph.invoke(input=input, config=config)
+            # CRM Update Subroutine: Sync profile details when turn finishes
+            # final_state = self.graph.get_state(config).values
+            # phone = ""
+            # extracted_params = final_state.get("extracted_parameters") or {}
+            # gathered_params = final_state.get("gathered_parameters") or {}
+            # if extracted_params.get("phone"):
+            #     phone = extracted_params["phone"]
+            # elif gathered_params.get("phone"):
+            #     phone = gathered_params["phone"]
+            #
+            # metadata = final_state.get("analyzer_metadata")
+            # if phone and metadata and metadata.get("knowledge_graph"):
+            #     from .tools import update_crm_profile
+            #     update_crm_profile(
+            #         phone,
+            #         {
+            #             "knowledge_graph": metadata["knowledge_graph"],
+            #             "evidence": metadata.get("evidence", ""),
+            #             "directive": metadata.get("directive", ""),
+            #         },
+            #     )
 
-        # CRM Update Subroutine: Sync profile details when turn finishes
-        # state = self.graph.get_state(config).values
-        # phone = ""
-        # extracted_params = state.get("extracted_parameters") or {}
-        # gathered_params = state.get("gathered_parameters") or {}
-        # if extracted_params.get("phone"):
-        #     phone = extracted_params["phone"]
-        # elif gathered_params.get("phone"):
-        #     phone = gathered_params["phone"]
-        #
-        # metadata = state.get("analyzer_metadata")
-        # if phone and metadata and metadata.get("knowledge_graph"):
-        #     from .tools import update_crm_profile
-        #
-        #     update_crm_profile(
-        #         phone,
-        #         {
-        #             "knowledge_graph": metadata["knowledge_graph"],
-        #             "evidence": metadata.get("evidence", ""),
-        #             "directive": metadata.get("directive", ""),
-        #         },
-        #     )
+            # --- Try to parse raw_content as JSON first (future-proof) ---
+            try:
+                parsed = json.loads(raw_content)
+                if isinstance(parsed, dict) and "type" in parsed:
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
 
-        return response["messages"][-1].content
+            # --- Inspect final graph state to determine response type ---
+            final_state = self.graph.get_state(config).values
+            is_handoff = final_state.get("is_handoff", False)
+            handoff_summary = final_state.get("handoff_summary", "")
+            sentiment = final_state.get("sentiment", "neutral")
+            next_agent = final_state.get("next_agent", "")
+
+            # Detect escalation: explicit flag OR last routed node was escalator
+            escalation_report = final_state.get("escalation_report")
+            if is_handoff or next_agent in ("escalate", "escalator") or escalation_report:
+                # Ensure conversation exists in DB
+                from database import db
+                conv = db.get_conversation(thread_id)
+                if not conv:
+                    conv = db.create_conversation(thread_id, customer_phone=thread_id)
+
+                summary = handoff_summary or (escalation_report.get("summary") if escalation_report else raw_content)
+                reason = escalation_report.get("reason") if escalation_report else None
+                urgency = escalation_report.get("urgency") if escalation_report else None
+                rec_action = escalation_report.get("recommended_action") if escalation_report else None
+                metadata = escalation_report.get("metadata") if escalation_report else None
+
+                # Check if ticket already exists
+                existing_tickets = db.get_tickets()
+                has_open_ticket = any(
+                    t["conversation_id"] == thread_id and t["status"] == "open"
+                    for t in existing_tickets
+                )
+                if not has_open_ticket:
+                    db.add_to_tickets(
+                        conversation_id=thread_id,
+                        customer_phone=conv["customer_phone"],
+                        summary=summary,
+                        reason=reason,
+                        urgency=urgency,
+                        recommended_action=rec_action,
+                        metadata=metadata,
+                    )
+
+                # Update conversation status to escalated
+                db.update_conversation(
+                    thread_id,
+                    {
+                        "status": "escalated",
+                        "handoff_summary": summary,
+                    }
+                )
+
+                return {
+                    "type": "escalation_ticket",
+                    "message": raw_content or "Connecting you to a support specialist. Please hold...",
+                    "summary": summary,
+                    "sentiment": sentiment,
+                    "intent": "escalation",
+                    "escalation_report": escalation_report,
+                }
+
+            # Detect blocker node output via known constant text prefix
+            if raw_content.startswith("Thank you for reaching out. I am Nuit Fragrances"):
+                return {
+                    "type": "blocked",
+                    "message": raw_content,
+                }
+
+            return {
+                "type": "ai_reply",
+                "message": raw_content,
+                "sentiment": sentiment,
+                "intent": "general",
+            }
+
+        except Exception as e:
+            if isinstance(e, ValueError) and "rate limit" in str(e).lower():
+                return {
+                    "type": "blocked",
+                    "message": "Too many requests. Please wait a moment before sending more messages."
+                }
+            try:
+                from .tools import add_to_escalation_queue
+                error_summary = f"System Error / Content Filter triggered: {str(e)}"
+                report = {
+                    "reason": "react_failure",
+                    "summary": error_summary,
+                    "urgency": 1.0,
+                    "metadata": {
+                        "failed_query": message,
+                        "exception_details": str(e),
+                    },
+                }
+                add_to_escalation_queue(report)
+
+                # Ensure conversation and ticket exist in DB
+                from database import db
+                conv = db.get_conversation(thread_id)
+                if not conv:
+                    conv = db.create_conversation(thread_id, customer_phone=thread_id)
+
+                existing_tickets = db.get_tickets()
+                has_open_ticket = any(
+                    t["conversation_id"] == thread_id and t["status"] == "open"
+                    for t in existing_tickets
+                )
+                if not has_open_ticket:
+                    db.add_to_tickets(
+                        conversation_id=thread_id,
+                        customer_phone=conv["customer_phone"],
+                        summary=error_summary,
+                        reason="react_failure",
+                        urgency=1.0,
+                        metadata=report["metadata"],
+                    )
+                db.update_conversation(
+                    thread_id,
+                    {
+                        "status": "escalated",
+                        "handoff_summary": error_summary,
+                    }
+                )
+            except Exception:
+                report = None
+
+            return {
+                "type": "escalation_ticket",
+                "message": "I am connecting you directly with a specialist from our care team to resolve this for you immediately. A live representative will review your message history and pick up this chat right here shortly.",
+                "summary": f"Content filter / System exception: {str(e)}",
+                "sentiment": "neutral",
+                "intent": "escalation",
+                "escalation_report": report,
+            }
 
     def get_thread_state(self, thread_id: str) -> Dict:
         """Retrieve the current state of a conversation thread."""
         config = {"configurable": {"thread_id": thread_id}}
         return self.graph.get_state(config).values
+
+    def reset_thread(self, thread_id: str) -> None:
+        """Clear graph checkpointer memory for a thread."""
+        try:
+            if hasattr(self.memory, "storage") and isinstance(self.memory.storage, dict):
+                keys_to_delete = [
+                    k for k in list(self.memory.storage.keys())
+                    if k == thread_id or (isinstance(k, tuple) and len(k) > 0 and k[0] == thread_id)
+                ]
+                for k in keys_to_delete:
+                    del self.memory.storage[k]
+                logger.info("Reset memory saver state for thread_id", thread_id=thread_id)
+        except Exception as e:
+            logger.error("Failed to reset thread state in memory saver", error=str(e))
 
     def compile_graph(self, checkpointer=None):
         """
