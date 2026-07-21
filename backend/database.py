@@ -4,7 +4,7 @@ import json
 import logging
 import re
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger("database")
@@ -364,6 +364,20 @@ class DatabaseClient:
             return conv_timestamp
 
         logger.info("DatabaseClient: Seeding conversations and messages...")
+        now = datetime.now(timezone.utc)
+        thread_offsets = {
+            "thread-1": timedelta(minutes=15),
+            "thread-2": timedelta(minutes=45),
+            "thread-3": timedelta(hours=2),
+            "thread-4": timedelta(hours=3),
+            "thread-5": timedelta(hours=5),
+            "thread-6": timedelta(hours=8),
+            "thread-7": timedelta(hours=12),
+            "thread-8": timedelta(hours=24),
+            "thread-9": timedelta(hours=28),
+            "thread-10": timedelta(hours=48),
+        }
+
         for c in conversations:
             platform = c.get("channel", "whatsapp")
             status = c.get("status", "active")
@@ -394,6 +408,9 @@ class DatabaseClient:
             if customer_phone == "Unknown":
                 customer_phone = "Unknown"
 
+            c_offset = thread_offsets.get(c["id"], timedelta(hours=2))
+            c_timestamp = (now - c_offset).isoformat()
+
             cursor.execute(
                 """
                 INSERT INTO conversations (
@@ -409,8 +426,8 @@ class DatabaseClient:
                     c.get("handoff_summary", ""),
                     assigned_expert_id,
                     c.get("cost", 0.0),
-                    c["timestamp"],
-                    c["timestamp"],
+                    c_timestamp,
+                    c_timestamp,
                 ),
             )
 
@@ -453,7 +470,7 @@ class DatabaseClient:
                         msg_tokens = agent_tokens[agent_idx]
                         agent_idx += 1
 
-                msg_time = parse_msg_timestamp(c["timestamp"], m["timestamp"])
+                msg_time = (now - c_offset + timedelta(minutes=idx * 2)).isoformat()
 
                 sentiment_data_str = None
                 sentiment = None
@@ -486,12 +503,16 @@ class DatabaseClient:
 
         logger.info("DatabaseClient: Seeding tickets...")
         for t in tickets:
+            t_offset = thread_offsets.get(t["conversation_id"], timedelta(hours=2))
+            t_created = (now - t_offset).isoformat()
+            t_resolved = (now - t_offset + timedelta(minutes=45)).isoformat() if t["status"] == "resolved" else None
+
             cursor.execute(
                 """
                 INSERT INTO tickets (
                     id, conversation_id, customer_phone, summary, status, 
-                    assigned_to, created_at, resolved_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    assigned_to, reason, urgency, recommended_action, metadata, created_at, resolved_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     t["id"],
@@ -500,8 +521,12 @@ class DatabaseClient:
                     t["summary"],
                     t["status"],
                     t["assigned_to"],
-                    t["created_at"],
-                    t["resolved_at"],
+                    t.get("reason", "Customer Service Escalation"),
+                    t.get("urgency", 0.8),
+                    t.get("recommended_action", "Review conversation and contact client."),
+                    t.get("metadata", "{}"),
+                    t_created,
+                    t_resolved,
                 ),
             )
         logger.info(

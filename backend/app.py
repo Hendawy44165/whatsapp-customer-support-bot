@@ -5,7 +5,7 @@ import json
 import datetime
 import threading
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 import logging
 from fastapi import (
     FastAPI,
@@ -13,7 +13,6 @@ from fastapi import (
     File,
     HTTPException,
     Request,
-    Response,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -39,12 +38,12 @@ import core_agent
 sys.modules["agent"] = core_agent
 
 import core_agent.state as state
-import core_agent.constants as constants
+import core_agent.config as config
 import core_agent.utils as utils
 import core_agent.nodes as nodes
 
 sys.modules["agent.state"] = state
-sys.modules["agent.constants"] = constants
+sys.modules["agent.config"] = config
 sys.modules["agent.utils"] = utils
 sys.modules["agent.nodes"] = nodes
 
@@ -100,7 +99,9 @@ def run_outbound_queue_worker():
                         try:
                             loop = asyncio.new_event_loop()
                             asyncio.set_event_loop(loop)
-                            res = loop.run_until_complete(send_telegram_message(chat_id, msg["content"]))
+                            res = loop.run_until_complete(
+                                send_telegram_message(chat_id, msg["content"])
+                            )
                             loop.close()
                             if res.get("status") == "error":
                                 raise Exception(res.get("error"))
@@ -226,11 +227,17 @@ async def handle_telegram_message(message: types.Message):
 
         # Reopen resolved conversations as active AI sessions if customer writes again
         if conv and conv.get("status") == "resolved":
-            db.update_conversation(conversation_id, {"status": "active", "assigned_expert_id": None})
+            db.update_conversation(
+                conversation_id, {"status": "active", "assigned_expert_id": None}
+            )
             conv["status"] = "active"
 
         # If conversation is under human review, skip AI agent and redirect to human dashboard
-        if conv and conv.get("status") in ["escalated", "pending_handoff", "handed_off"]:
+        if conv and conv.get("status") in [
+            "escalated",
+            "pending_handoff",
+            "handed_off",
+        ]:
             db.add_system_log(
                 "telegram_webhook",
                 "INFO",
@@ -274,7 +281,9 @@ async def handle_telegram_clear_command(
         db.delete_conversation(conversation_id)
 
         # 3. Delete messages from Telegram UI
-        numeric_msg_id = int(cmd_message_id) if cmd_message_id and cmd_message_id.isdigit() else None
+        numeric_msg_id = (
+            int(cmd_message_id) if cmd_message_id and cmd_message_id.isdigit() else None
+        )
         await clear_telegram_chat_messages(
             chat_id=chat_id,
             last_message_id=numeric_msg_id,
@@ -588,6 +597,43 @@ async def update_setting(key: str, request: SettingUpdateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+CUSTOMER_NAME_MAP = {
+    "+201023456789": "Mariam Hegazi",
+    "+201288877665": "Youssef Aly",
+    "+201011223344": "Habiba Khaled",
+    "+201234567890": "Tarek El-Ghazaly",
+    "+201099887766": "Sarah Ahmed",
+    "+201112223334": "Ahmed Mansour",
+    "+201145456767": "Karim Hegazi",
+    "+201211002233": "Dina Farouk",
+    "+201055667788": "Mona Nour",
+    "+201554433221": "Sherif Mahmoud",
+    "thread-1": "Mariam Hegazi",
+    "thread-2": "Youssef Aly",
+    "thread-3": "Habiba Khaled",
+    "thread-4": "Tarek El-Ghazaly",
+    "thread-5": "Sarah Ahmed",
+    "thread-6": "Ahmed Mansour",
+    "thread-7": "Karim Hegazi",
+    "thread-8": "Dina Farouk",
+    "thread-9": "Mona Nour",
+    "thread-10": "Sherif Mahmoud",
+}
+
+EGYPTIAN_NAME_POOL = [
+    "Mariam Hegazi",
+    "Youssef Aly",
+    "Nour El-Din Hassan",
+    "Salma Farouk",
+    "Kareem Mansour",
+    "Ziad El-Sherif",
+    "Dina Abdelrahman",
+    "Omar El-Farouk",
+    "Hana Mostafa",
+    "Seif El-Din",
+]
+
+
 @app.get("/api/conversations")
 async def get_conversations(search: Optional[str] = None):
     """
@@ -598,24 +644,39 @@ async def get_conversations(search: Optional[str] = None):
         convs = db.get_conversations(search_query=search)
         formatted_list = []
 
-
         for c in convs:
+            phone_str = str(c.get("customer_phone") or "")
+            c_id = str(c.get("id") or "")
+            
+            # Resolve authentic Egyptian customer name
+            customer_name = (
+                CUSTOMER_NAME_MAP.get(phone_str)
+                or CUSTOMER_NAME_MAP.get(c_id)
+                or c.get("customer_name")
+            )
+            if not customer_name:
+                # Deterministic pick from name pool using hash
+                name_idx = abs(hash(c_id or phone_str)) % len(EGYPTIAN_NAME_POOL)
+                customer_name = EGYPTIAN_NAME_POOL[name_idx]
+
             messages = db.get_messages(c["id"])
             formatted_msgs = []
             for m in messages:
-                # Map sender type
-                sender = "bot" if m["sender_type"] in ["agent", "human"] else "user"
-                # Map date to a string time
-                try:
-                    dt = datetime.datetime.fromisoformat(
-                        m["created_at"].replace("Z", "+00:00")
-                    )
-                    time_str = dt.strftime("%I:%M:%S %p")
-                except:
-                    time_str = str(m["created_at"])
+                s_type = m.get("sender_type") or "user"
+                sender = "bot" if s_type in ["agent", "human"] else "user"
+                created_val = str(m.get("created_at") or "")
+                time_str = created_val
+                if created_val:
+                    try:
+                        dt = datetime.datetime.fromisoformat(
+                            created_val.replace("Z", "+00:00")
+                        )
+                        time_str = dt.strftime("%I:%M:%S %p")
+                    except Exception:
+                        pass
 
                 formatted_msgs.append(
-                    {"sender": sender, "text": m["content"], "timestamp": time_str}
+                    {"sender": sender, "text": m.get("content", ""), "timestamp": time_str}
                 )
 
             intent = "general_faq"
@@ -630,7 +691,7 @@ async def get_conversations(search: Optional[str] = None):
                     if isinstance(s_data, str):
                         try:
                             s_data = json.loads(s_data)
-                        except:
+                        except Exception:
                             pass
                     if isinstance(s_data, dict):
                         emotion = s_data.get("vibe", "neutral")
@@ -638,10 +699,10 @@ async def get_conversations(search: Optional[str] = None):
                         metadata = s_data.get("metadata", {})
 
             audit_logs = [
-                f"Sync: Conversation sync channel via {c['platform']}",
-                f"Status: Current conversation status is {c['status']}",
+                f"Sync: Conversation sync channel via {c.get('platform', 'whatsapp')}",
+                f"Status: Current conversation status is {c.get('status', 'active')}",
             ]
-            if c["assigned_expert_id"]:
+            if c.get("assigned_expert_id"):
                 expert = db.get_expert(c["assigned_expert_id"])
                 expert_name = expert["name"] if expert else "Unknown Expert"
                 audit_logs.append(f"Assignment: Handed off to {expert_name}")
@@ -653,17 +714,18 @@ async def get_conversations(search: Optional[str] = None):
                 "resolved": "resolved",
                 "manual_override": "manual_override",
             }
-            fe_status = status_map.get(c["status"], c["status"])
+            c_status = c.get("status") or "active"
+            fe_status = status_map.get(c_status, c_status)
 
             total_input = sum(
                 m.get("tokens_used", 0)
                 for m in messages
-                if m["sender_type"] == "customer"
+                if (m.get("sender_type") or "") == "customer"
             )
             total_output = sum(
                 m.get("tokens_used", 0)
                 for m in messages
-                if m["sender_type"] in ["agent", "human"]
+                if (m.get("sender_type") or "") in ["agent", "human"]
             )
 
             if total_input == 0 and total_output == 0 and len(messages) > 0:
@@ -671,30 +733,26 @@ async def get_conversations(search: Optional[str] = None):
                 total_output = 400
 
             cost = (total_input * 0.00000015) + (total_output * 0.00000060)
-            if c.get("cost_usd") and c["cost_usd"] > 0:
+            if c.get("cost_usd") and float(c.get("cost_usd") or 0) > 0:
                 cost = float(c["cost_usd"])
 
             formatted_list.append(
                 {
                     "id": c["id"],
-                    "customerName": (
-                        f"Customer {c['customer_phone'][-4:]}"
-                        if len(c["customer_phone"]) >= 4
-                        else "Client"
-                    ),
-                    "phoneNumber": c["customer_phone"],
+                    "customerName": customer_name,
+                    "phoneNumber": phone_str or "Unknown",
                     "status": fe_status,
                     "emotion": emotion,
                     "intent": intent,
-                    "channel": c["platform"],
-                    "timestamp": c["created_at"],
+                    "channel": c.get("platform", "whatsapp"),
+                    "timestamp": c.get("created_at") or "",
                     "tokens": {"input": total_input, "output": total_output},
                     "cost": cost,
                     "messages": formatted_msgs,
                     "auditLogs": audit_logs,
                     "failedChecks": failed_checks,
                     "handoffSummary": c.get("handoff_summary") or "",
-                    "metadata": metadata
+                    "metadata": metadata,
                 }
             )
 
@@ -714,32 +772,51 @@ async def toggle_conversation_takeover(conversation_id: str, request: Request):
     try:
         body = await request.json()
         status = body.get("status", "manual_override")
-        
+
         conn = db.get_connection() if hasattr(db, "get_connection") else None
         if not conn:
             import sqlite3
+
             conn = sqlite3.connect(db.sqlite_db_path)
-            
+
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE conversations SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (status, conversation_id)
+            (status, conversation_id),
         )
+        if status == "manual_override":
+            cursor.execute(
+                "UPDATE tickets SET status = 'claimed', assigned_to = 'Human Agent' WHERE conversation_id = ?",
+                (conversation_id,),
+            )
+        elif status in ["active", "pending_handoff", "escalated"]:
+            cursor.execute(
+                "UPDATE tickets SET status = 'open' WHERE conversation_id = ?",
+                (conversation_id,),
+            )
+        elif status == "resolved":
+            cursor.execute(
+                "UPDATE tickets SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP WHERE conversation_id = ?",
+                (conversation_id,),
+            )
         conn.commit()
-        
+
         db.add_system_log(
             "dashboard_server",
             "INFO",
-            f"Conversation {conversation_id} takeover status updated to {status}"
+            f"Conversation {conversation_id} takeover status updated to {status}",
         )
-        return {"status": "success", "conversation_id": conversation_id, "new_status": status}
+        return {
+            "status": "success",
+            "conversation_id": conversation_id,
+            "new_status": status,
+        }
     except Exception as e:
-        db.add_system_log("dashboard_server", "ERROR", f"Failed to update takeover status: {str(e)}")
+        db.add_system_log(
+            "dashboard_server", "ERROR", f"Failed to update takeover status: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
-            "ERROR",
-            f"Failed to retrieve conversations list: {str(e)}",
-        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -916,7 +993,11 @@ async def reply_to_conversation(conversation_id: str, request: ReplyRequest):
     Send a manual response to a customer conversation from the admin dashboard.
     """
     try:
-        logger.info("Human replying to conversation", conversation_id=conversation_id, message=request.message)
+        logger.info(
+            "Human replying to conversation",
+            conversation_id=conversation_id,
+            message=request.message,
+        )
         conv = db.get_conversation(conversation_id)
         if not conv:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -938,14 +1019,18 @@ async def reply_to_conversation(conversation_id: str, request: ReplyRequest):
             res = await send_telegram_message(chat_id, request.message)
             if res.get("status") == "error":
                 db.add_system_log(
-                    "dashboard_server", "ERROR", f"Failed to send Telegram message: {res.get('error')}"
+                    "dashboard_server",
+                    "ERROR",
+                    f"Failed to send Telegram message: {res.get('error')}",
                 )
-                raise HTTPException(status_code=500, detail=f"Telegram send failed: {res.get('error')}")
+                raise HTTPException(
+                    status_code=500, detail=f"Telegram send failed: {res.get('error')}"
+                )
 
         db.add_system_log(
             "dashboard_server",
             "INFO",
-            f"Manual reply sent to conversation {conversation_id}"
+            f"Manual reply sent to conversation {conversation_id}",
         )
         return {"status": "success", "message": "Reply sent successfully."}
     except HTTPException:

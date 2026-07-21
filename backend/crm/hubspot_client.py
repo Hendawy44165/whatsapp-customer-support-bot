@@ -10,6 +10,7 @@ API Reference:
     Notes (Engagements): https://developers.hubspot.com/docs/api/crm/engagements
 """
 
+import os
 import logging
 import requests
 from typing import Optional

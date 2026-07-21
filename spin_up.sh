@@ -101,18 +101,18 @@ trap cleanup INT TERM
 
 echo "🔥 Starting FastAPI backend server (SQLite)..."
 cd "$ROOT_DIR/backend"
-uv run uvicorn app:app --host 0.0.0.0 --port 8000 > "$ROOT_DIR/backend.log" 2>&1 &
+uv run uvicorn app:app --host 0.0.0.0 --port 8000 > /dev/null 2>&1 &
 BACKEND_PID=$!
 
 echo "🔥 Starting React frontend dashboard..."
 cd "$ROOT_DIR/frontend"
-npm run dev > "$ROOT_DIR/frontend.log" 2>&1 &
+npx vite --host 0.0.0.0 > /dev/null 2>&1 &
 FRONTEND_PID=$!
 
 TAILSCALE_PID=""
 if [ "$HAS_TAILSCALE" = true ]; then
   echo "🔥 Starting Tailscale Funnel on port 8000 in the background..."
-  tailscale funnel 8000 > "$ROOT_DIR/tailscale.log" 2>&1 &
+  tailscale funnel 8000 > /dev/null 2>&1 &
   TAILSCALE_PID=$!
 fi
 
@@ -123,13 +123,6 @@ echo "🔌 Backend API Swagger UI: http://localhost:8000/docs"
 echo "💻 Frontend Dashboard:     http://localhost:5173"
 if [ "$HAS_TAILSCALE" = true ]; then
   echo "📡 Tailscale Funnel:       Exposing port 8000 publicly"
-fi
-echo "------------------------------------------------------------------------------"
-echo "📝 Log files:"
-echo "   - Backend:   $ROOT_DIR/backend.log"
-echo "   - Frontend:  $ROOT_DIR/frontend.log"
-if [ "$HAS_TAILSCALE" = true ]; then
-  echo "   - Tailscale: $ROOT_DIR/tailscale.log"
 fi
 echo "------------------------------------------------------------------------------"
 echo "🛑 Press Ctrl+C to terminate all services."

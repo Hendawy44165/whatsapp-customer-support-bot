@@ -12,19 +12,19 @@ from database import db
 
 SHOWCASE_CONVERSATIONS = [
     {
-        "id": "showcase-1",
-        "customer_phone": "+201019876543",
+        "id": "thread-1",
+        "customer_phone": "+201023456789",
         "platform": "whatsapp",
         "status": "active",
         "hubspot_contact_id": "hs_8839201",
-        "cost_usd": 0.0012,
+        "cost_usd": 0.00065,
         "created_at": (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat(),
         "messages": [
             {
                 "sender_type": "customer",
-                "content": "Hi! Is Nuit Noir Intense 50ml in stock? And how fast can you deliver to Alexandria?",
-                "sentiment": "calm",
-                "intent": "product_stock_inquiry",
+                "content": "hiii 3ayza a3raf al discovery box feha eh exactly?",
+                "sentiment": "positive",
+                "intent": "product_details_inquiry",
                 "tokens_used": 45,
                 "created_at": (
                     datetime.now(timezone.utc) - timedelta(minutes=15)
@@ -32,9 +32,9 @@ SHOWCASE_CONVERSATIONS = [
             },
             {
                 "sender_type": "agent",
-                "content": "Hello! 🔮 Yes, **Noir Intense (50ml)** is in stock! Price is 850 EGP.\n\n🚚 **Alexandria Delivery**: Express delivery via Bosta takes **24 to 48 hours**.\nWould you like me to reserve a bottle for you or send the order link?",
+                "content": "Our Discovery Box features *3ml* atomizers of *Signature Sauvage*, *Oud Royale*, and *Noir Intense*. Priced at *450 EGP* with complimentary shipping, it includes a *450 EGP* voucher redeemable toward any *50ml* full bottle.",
                 "sentiment": "satisfied",
-                "intent": "product_stock_inquiry",
+                "intent": "product_details_inquiry",
                 "tokens_used": 180,
                 "created_at": (
                     datetime.now(timezone.utc) - timedelta(minutes=14, seconds=58)
@@ -47,51 +47,51 @@ SHOWCASE_CONVERSATIONS = [
             "trace_id": "tr_ls_98a72b10",
             "trace_steps": [
                 {
-                    "step": "Intent Classification",
-                    "detail": "Routed to 'product_stock_inquiry' (Confidence: 99.2%)",
+                    "step": "Router Node (router_node)",
+                    "detail": "Classified intent as 'product_details_inquiry' (Sentiment: positive)",
                 },
                 {
-                    "step": "Tool Execution",
-                    "detail": "Executed get_product_stock('Noir Intense 50ml') -> Stock: 24 units",
+                    "step": "Simple QA Node (simple_qa)",
+                    "detail": "Retrieved catalog facts & Discovery Box 450 EGP voucher terms",
                 },
                 {
-                    "step": "CRM Integration",
-                    "detail": "HubSpot Contact upserted: +201019876543 (ID: hs_8839201)",
+                    "step": "CRM Subroutine (hubspot_upsert)",
+                    "detail": "HubSpot Contact upserted: +201023456789 (ID: hs_8839201)",
                 },
                 {
-                    "step": "Guardrail Check",
-                    "detail": "Passed fact verification & brand voice check",
+                    "step": "Output Sanitizer Middleware",
+                    "detail": "Verified zero prompt leakage & WhatsApp single-asterisk formatting",
                 },
             ],
         },
     },
     {
-        "id": "showcase-2",
-        "customer_phone": "+201201122334",
+        "id": "thread-2",
+        "customer_phone": "+201288877665",
         "platform": "whatsapp",
-        "status": "resolved",
+        "status": "pending_handoff",
         "hubspot_contact_id": "hs_9918273",
         "cost_usd": 0.00095,
-        "created_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+        "created_at": (datetime.now(timezone.utc) - timedelta(minutes=45)).isoformat(),
         "messages": [
             {
                 "sender_type": "customer",
-                "content": "Where is my order NUIT-1008? Can I get a tracking link?",
-                "sentiment": "calm",
-                "intent": "order_tracking",
+                "content": "NUIT-1008 status? 5 days late.",
+                "sentiment": "negative",
+                "intent": "order_delay_complaint",
                 "tokens_used": 35,
                 "created_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=2)
+                    datetime.now(timezone.utc) - timedelta(minutes=45)
                 ).isoformat(),
             },
             {
                 "sender_type": "agent",
-                "content": "Hello! Order **NUIT-1008** was dispatched today via Bosta.\nTracking Code: `BS-998822-EG`\nStatus: In Transit (Est. delivery tomorrow).",
-                "sentiment": "satisfied",
-                "intent": "order_tracking",
+                "content": "I apologize for the delay regarding your order *NUIT-1008*. I have escalated your issue to our *care team* so they can immediately follow up with *Bosta logistics* and provide you with an updated delivery status.",
+                "sentiment": "frustrated",
+                "intent": "order_delay_complaint",
                 "tokens_used": 140,
                 "created_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=1, minutes=59)
+                    datetime.now(timezone.utc) - timedelta(minutes=44, seconds=59)
                 ).isoformat(),
             },
         ],
@@ -101,58 +101,58 @@ SHOWCASE_CONVERSATIONS = [
             "trace_id": "tr_ls_11b34c90",
             "trace_steps": [
                 {
-                    "step": "Intent Classification",
-                    "detail": "Routed to 'order_tracking' (Confidence: 98.8%)",
+                    "step": "Router Node (router_node)",
+                    "detail": "Classified intent as 'order_delay_complaint' (Sentiment: negative)",
                 },
                 {
-                    "step": "Tool Execution",
-                    "detail": "Executed lookup_order('NUIT-1008') -> Courier: Bosta, Status: SHIPPED",
+                    "step": "Escalator Node (escalator)",
+                    "detail": "Evaluated courier_delay trigger (Urgency: 0.70)",
                 },
                 {
                     "step": "CRM Integration",
                     "detail": "Logged interaction to HubSpot Contact hs_9918273",
                 },
-                {"step": "Guardrail Check", "detail": "Passed factual policy check"},
+                {"step": "Guardrail Check", "detail": "Generated structured escalation report for Ticket #1"},
             ],
         },
     },
     {
-        "id": "showcase-3",
-        "customer_phone": "+201155443322",
+        "id": "thread-3",
+        "customer_phone": "+201011223344",
         "platform": "whatsapp",
         "status": "manual_override",
         "hubspot_contact_id": "hs_7726154",
         "cost_usd": 0.00210,
-        "created_at": (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat(),
+        "created_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
         "messages": [
             {
                 "sender_type": "customer",
-                "content": "I received my bottle yesterday but the sprayer nozzle is leaking! I need a replacement right now.",
-                "sentiment": "frustrated",
-                "intent": "damaged_item_complaint",
+                "content": "omg I just opened the package and the bottle is leaking everywhere!! I need this for a birthday party tonight!!",
+                "sentiment": "negative",
+                "intent": "damaged_product_incident",
                 "tokens_used": 60,
                 "created_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=5)
+                    datetime.now(timezone.utc) - timedelta(hours=2)
                 ).isoformat(),
             },
             {
                 "sender_type": "agent",
-                "content": "I am so sorry to hear that! We replace damaged items immediately at zero cost. I am connecting you with a care specialist right now.",
+                "content": "I am deeply sorry to hear about your leaking bottle. I have escalated this as a *top priority* to our *care team* so they can arrange an immediate replacement for your event tonight.",
                 "sentiment": "anxious",
-                "intent": "damaged_item_complaint",
+                "intent": "damaged_product_incident",
                 "tokens_used": 190,
                 "created_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=4, minutes=59)
+                    datetime.now(timezone.utc) - timedelta(hours=1, minutes=59)
                 ).isoformat(),
             },
             {
                 "sender_type": "human",
-                "content": "Hello! This is Hendawy from Nuit Care. I've personally dispatched a brand new replacement bottle for you via express delivery. Here is your reference number: NUIT-REPL-402.",
+                "content": "Hello Habiba. This is Hendawy from Nuit Care. I have personally dispatched a replacement bottle for you via express delivery. Reference ID: *NUIT-REPL-402*.",
                 "sentiment": "satisfied",
                 "intent": "human_resolution",
                 "tokens_used": 0,
                 "created_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=4, minutes=30)
+                    datetime.now(timezone.utc) - timedelta(hours=1, minutes=30)
                 ).isoformat(),
             },
         ],
@@ -162,12 +162,12 @@ SHOWCASE_CONVERSATIONS = [
             "trace_id": "tr_ls_77d88e00",
             "trace_steps": [
                 {
-                    "step": "Intent Classification",
-                    "detail": "Routed to 'damaged_item_complaint'",
+                    "step": "Router Node (router_node)",
+                    "detail": "Classified intent as 'damaged_product_incident' (Urgency: 0.95)",
                 },
                 {
-                    "step": "Guardrail Check",
-                    "detail": "Frustration score > 0.85 -> Triggered Human Handoff",
+                    "step": "Escalator Node (escalator)",
+                    "detail": "Evaluated damaged_item & time sensitivity (event tonight)",
                 },
                 {
                     "step": "Human Takeover",
@@ -204,6 +204,9 @@ def seed_database():
                 conv["created_at"],
             ),
         )
+
+        # Clear existing messages for this conversation to prevent duplicate rendering
+        cursor.execute("DELETE FROM messages WHERE conversation_id = ?", (conv["id"],))
 
         # Insert messages
         for msg in conv["messages"]:

@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { 
   Search, 
-  User, 
-  Phone, 
-  Clock, 
-  Coins, 
   ShieldAlert, 
   Heart, 
   MessageSquare,
   AlertTriangle,
   Send,
   MessageCircle,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 
-// Custom lightweight Markdown renderer to parse lists and **bold** text in the client portal
+// Custom lightweight Markdown renderer for client portal
 function MarkdownText({ text }) {
   if (!text) return null;
   
@@ -23,15 +20,13 @@ function MarkdownText({ text }) {
   return (
     <div className="markdown-content">
       {lines.map((line, idx) => {
-        // Detect bullet lists e.g. "1. **Customer Intent**:" or "- Item"
         const listMatch = line.match(/^(\d+\.\s+|\*\s+|-+\s+)(.*)/);
         
-        // Helper to parse **bold** blocks
         const renderLineContent = (content) => {
           const parts = content.split('**');
           return parts.map((part, i) => {
             if (i % 2 === 1) {
-              return <strong key={i}>{part}</strong>;
+              return <strong key={i} style={{ color: 'var(--gold)' }}>{part}</strong>;
             }
             return part;
           });
@@ -51,7 +46,7 @@ function MarkdownText({ text }) {
                 marginBottom: '6px',
                 fontSize: '0.85rem',
                 lineHeight: '1.45',
-                color: '#2C2B29'
+                color: 'var(--text-1)'
               }}
             >
               {renderLineContent(listText)}
@@ -67,7 +62,7 @@ function MarkdownText({ text }) {
               minHeight: line.trim() === "" ? '6px' : 'auto',
               fontSize: '0.85rem',
               lineHeight: '1.45',
-              color: '#2C2B29'
+              color: 'var(--text-1)'
             }}
           >
             {renderLineContent(line)}
@@ -78,13 +73,25 @@ function MarkdownText({ text }) {
   );
 }
 
-export default function Inspector({ conversations, onReply }) {
+export default function Inspector({ conversations = [], tickets = [], selectedConversationId, onSelectConversation, onReply }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [localConversations, setLocalConversations] = useState(conversations);
-  const [selectedId, setSelectedId] = useState(conversations[0]?.id || "");
+  const [selectedId, setSelectedId] = useState(selectedConversationId || conversations[0]?.id || "");
   const [loading, setLoading] = useState(false);
   const [replyText, setReplyText] = useState("");
-  const [showTraceModal, setShowTraceModal] = useState(false);
+
+  React.useEffect(() => {
+    if (selectedConversationId) {
+      setSelectedId(selectedConversationId);
+    }
+  }, [selectedConversationId]);
+
+  const handleSelectId = (id) => {
+    setSelectedId(id);
+    if (onSelectConversation) {
+      onSelectConversation(id);
+    }
+  };
 
   const handleSendReply = async () => {
     if (!replyText.trim() || !onReply) return;
@@ -101,7 +108,6 @@ export default function Inspector({ conversations, onReply }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
       });
-      // Update local state immediately
       setLocalConversations(prev =>
         prev.map(c => c.id === selectedId ? { ...c, status: nextStatus } : c)
       );
@@ -110,14 +116,12 @@ export default function Inspector({ conversations, onReply }) {
     }
   };
 
-  // Sync localConversations when the main conversations list changes (e.g. background polling or refresh)
   React.useEffect(() => {
     if (!searchTerm.trim()) {
       setLocalConversations(conversations);
     }
   }, [conversations, searchTerm]);
 
-  // Fetch search results from the database with debounce
   React.useEffect(() => {
     if (!searchTerm.trim()) {
       setLocalConversations(conversations);
@@ -146,7 +150,6 @@ export default function Inspector({ conversations, onReply }) {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, conversations]);
 
-  // Adjust selection when the filtered list changes
   React.useEffect(() => {
     if (localConversations.length > 0) {
       const exists = localConversations.some(c => c.id === selectedId);
@@ -160,7 +163,6 @@ export default function Inspector({ conversations, onReply }) {
 
   const selectedThread = localConversations.find(c => c.id === selectedId);
 
-  // Color mapping/labels for platform channels
   const getChannelLabel = (channel) => {
     switch (channel) {
       case 'whatsapp': return 'WhatsApp';
@@ -174,17 +176,17 @@ export default function Inspector({ conversations, onReply }) {
   return (
     <div className="inspector-layout fade-in">
       {/* Sidebar List */}
-      <div className="glass-panel threads-sidebar">
-        <div className="search-input-wrapper">
+      <div className="panel threads-sidebar" style={{ padding: '16px' }}>
+        <div style={{ position: 'relative' }}>
           {loading ? (
-            <RefreshCw size={16} className="spin-loader" style={{ color: 'var(--accent-orange)' }} />
+            <RefreshCw size={14} className="spin-loader" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gold)' }} />
           ) : (
-            <Search size={16} />
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }} />
           )}
           <input 
             type="text" 
             placeholder="Search by client, channel, vibe..." 
-            className="search-input"
+            style={{ width: '100%', padding: '8px 12px 8px 34px', fontSize: '0.82rem' }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -192,9 +194,8 @@ export default function Inspector({ conversations, onReply }) {
 
         <div className="threads-list">
           {localConversations.length === 0 ? (
-            <div className="empty-state">
-              <MessageSquare />
-              <p>No conversations found</p>
+            <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-3)', fontSize: '0.85rem' }}>
+              No conversations found
             </div>
           ) : (
             localConversations.map(c => {
@@ -205,9 +206,9 @@ export default function Inspector({ conversations, onReply }) {
                 <div 
                   key={c.id} 
                   className={`thread-item ${isActive ? 'active' : ''}`}
-                  onClick={() => setSelectedId(c.id)}
+                  onClick={() => handleSelectId(c.id)}
                 >
-                  <div className="thread-item-header">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span className="thread-client-name">{c.customerName}</span>
                     <span className="thread-time">
                       {new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -216,15 +217,12 @@ export default function Inspector({ conversations, onReply }) {
                   
                   <div className="thread-preview">{lastMessage}</div>
                   
-                  <div className="thread-meta-row">
-                    <span className={`badge ${c.status}`}>
-                      {c.status === 'manual_override' ? 'manual' : c.status}
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginTop: '2px' }}>
+                    <span className={`status-tag ${c.status === 'manual_override' ? 'claimed' : c.status === 'pending_handoff' ? 'escalated' : c.status}`}>
+                      {c.status === 'manual_override' ? 'manual' : c.status === 'pending_handoff' ? 'escalated' : c.status}
                     </span>
-                    <span className={`badge channel-${c.channel}`}>
+                    <span style={{ fontSize: '10.5px', color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
                       {getChannelLabel(c.channel)}
-                    </span>
-                    <span className={`badge emotion-${c.emotion}`}>
-                      {c.emotion}
                     </span>
                   </div>
                 </div>
@@ -234,56 +232,60 @@ export default function Inspector({ conversations, onReply }) {
         </div>
       </div>
 
-      {/* Main Details Panel */}
+      {/* Main Details & Inspector Panels */}
       {selectedThread ? (
-        <div className="glass-panel thread-details-container" style={{ padding: 0 }}>
+        <>
           {/* Chat Transcript pane */}
           <div className="chat-history-pane">
-            <div className="chat-header-details" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="chat-header-details">
               <div>
-                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', color: '#191816' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--text-1)', margin: 0 }}>
                   {selectedThread.customerName}
                 </h3>
-                <div style={{ fontSize: '0.75rem', color: '#686256', marginTop: '4px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-3)', marginTop: '2px', display: 'flex', gap: '10px', alignItems: 'center', fontFamily: 'var(--font-body)' }}>
                   <span>ID: {selectedThread.id}</span>
                   <span>•</span>
                   <span>{new Date(selectedThread.timestamp).toLocaleString()}</span>
                   <span>•</span>
-                  <span className={`badge channel-${selectedThread.channel}`} style={{ textTransform: 'none' }}>
-                    Origin: {getChannelLabel(selectedThread.channel)}
-                  </span>
+                  <span>{getChannelLabel(selectedThread.channel)}</span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {/* Human Takeover Toggle Button */}
                 <button
                   onClick={() => handleToggleTakeover(selectedThread.status)}
+                  className="btn-gold"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: selectedThread.status === 'manual_override' ? '1px solid var(--accent-red)' : '1px solid var(--accent-emerald)',
-                    background: selectedThread.status === 'manual_override' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                    color: selectedThread.status === 'manual_override' ? 'var(--accent-red)' : 'var(--accent-emerald)'
+                    fontSize: '11px',
+                    borderColor: selectedThread.status === 'manual_override' 
+                      ? 'var(--garnet)' 
+                      : (selectedThread.status === 'pending_handoff' || selectedThread.status === 'escalated')
+                        ? 'var(--gold)'
+                        : 'var(--emerald)',
+                    color: selectedThread.status === 'manual_override' 
+                      ? 'var(--garnet)' 
+                      : (selectedThread.status === 'pending_handoff' || selectedThread.status === 'escalated')
+                        ? 'var(--gold)'
+                        : 'var(--emerald)'
                   }}
                 >
-                  {selectedThread.status === 'manual_override' ? '👤 Manual Takeover Active' : '🤖 Agent Active (Takeover)'}
+                  {selectedThread.status === 'manual_override' 
+                    ? 'Human Operator Active (Release)' 
+                    : (selectedThread.status === 'pending_handoff' || selectedThread.status === 'escalated')
+                      ? 'Take Over Conversation'
+                      : selectedThread.status === 'resolved'
+                        ? 'Reopen Conversation'
+                        : 'AI Concierge Active (Takeover)'}
                 </button>
 
-                <span className={`badge ${selectedThread.status}`}>
-                  {selectedThread.status}
+                <span className={`status-tag ${selectedThread.status === 'manual_override' ? 'claimed' : selectedThread.status === 'pending_handoff' ? 'escalated' : selectedThread.status}`}>
+                  {selectedThread.status === 'manual_override' ? 'manual' : selectedThread.status === 'pending_handoff' ? 'escalated' : selectedThread.status}
                 </span>
               </div>
             </div>
 
-            {/* Plain text bubbles - no markdown parsing in chat history */}
-            <div className="chat-messages-scroller" style={{ flex: 1, overflowY: 'auto' }}>
+            {/* Chat message bubbles */}
+            <div className="chat-messages-scroller">
               {selectedThread.messages.map((m, idx) => (
                 <div key={idx} className={`chat-message-bubble ${m.sender}`}>
                   <span className="message-sender-name">
@@ -300,10 +302,10 @@ export default function Inspector({ conversations, onReply }) {
             {/* Chat Reply Input Bar */}
             <div style={{
               display: 'flex',
-              gap: '12px',
-              padding: '16px 20px',
-              borderTop: '1px solid var(--border-color)',
-              background: 'var(--bg-secondary)',
+              gap: '10px',
+              padding: '14px 20px',
+              borderTop: '1px solid var(--hairline)',
+              background: 'var(--surface-2)',
               alignItems: 'center'
             }}>
               <input
@@ -318,43 +320,30 @@ export default function Inspector({ conversations, onReply }) {
                 }}
                 style={{
                   flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  background: '#FFF',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  color: '#2C2B29'
+                  padding: '8px 12px',
+                  fontSize: '0.85rem'
                 }}
               />
               <button
                 onClick={handleSendReply}
+                className="btn-primary"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '10px 18px',
-                  background: 'var(--accent-orange)',
-                  color: '#FFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  gap: '6px'
                 }}
               >
-                <Send size={14} />
-                Send
+                <Send size={12} />
+                <span>Send</span>
               </button>
             </div>
           </div>
 
           {/* Right Inspector Drawer (Metadata / Auditor Logs) */}
-          <div className="thread-inspector-panel" style={{ padding: '24px 20px', borderLeft: '1px solid var(--border-color)', background: 'rgba(0, 0, 0, 0.01)' }}>
+          <div className="thread-inspector-panel">
             
             {/* Client Profile */}
-            <div style={{ marginBottom: '24px' }}>
+            <div>
               <h4 className="metadata-section-title">Client Profile</h4>
               <div className="metadata-row-item">
                 <span>Contact Name</span>
@@ -366,13 +355,12 @@ export default function Inspector({ conversations, onReply }) {
               </div>
               <div className="metadata-row-item">
                 <span>Source Channel</span>
-                <span style={{ fontWeight: 600 }}>{getChannelLabel(selectedThread.channel)}</span>
+                <span>{getChannelLabel(selectedThread.channel)}</span>
               </div>
               <div className="metadata-row-item">
                 <span>Detected Vibe</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Heart size={12} style={{ color: 'var(--accent-orange)' }} />
-                  <span className={`badge emotion-${selectedThread.emotion}`} style={{ fontSize: '0.6rem', padding: '1px 4px' }}>{selectedThread.emotion}</span>
+                <span style={{ color: 'var(--gold)', textTransform: 'capitalize' }}>
+                  {selectedThread.emotion}
                 </span>
               </div>
               <div className="metadata-row-item">
@@ -382,7 +370,7 @@ export default function Inspector({ conversations, onReply }) {
             </div>
 
             {/* Token Analytics */}
-            <div style={{ marginBottom: '24px' }}>
+            <div>
               <h4 className="metadata-section-title">Client Cost Metrics</h4>
               <div className="metadata-row-item">
                 <span>Input Tokens</span>
@@ -393,55 +381,59 @@ export default function Inspector({ conversations, onReply }) {
                 <span>{selectedThread.tokens.output.toLocaleString()}</span>
               </div>
               <div className="metadata-row-item" style={{ borderBottom: 'none' }}>
-                <span style={{ color: 'var(--accent-orange)', fontWeight: 600 }}>Calculated Cost</span>
-                <span style={{ color: 'var(--accent-orange)', fontWeight: 700 }}>${selectedThread.cost.toFixed(5)}</span>
+                <span style={{ color: 'var(--gold)' }}>Calculated Cost</span>
+                <span style={{ color: 'var(--gold)' }}>${selectedThread.cost.toFixed(5)}</span>
               </div>
             </div>
 
-            {/* Handoff Summary (Only if escalated) - PARSES MARKDOWN */}
-            {selectedThread.status === "escalated" && (
-              <div style={{ marginBottom: '24px', border: '1px solid rgba(220, 38, 38, 0.25)', borderRadius: '10px', padding: '14px', background: 'rgba(220, 38, 38, 0.02)' }}>
-                <h4 className="metadata-section-title" style={{ color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                  <AlertTriangle size={14} /> Human Handoff Report
-                </h4>
-                <div className="handoff-summary-text">
-                  <MarkdownText text={selectedThread.handoffSummary} />
+            {/* Handoff Summary & Ticket Metadata */}
+            {(() => {
+              const matchingTicket = tickets.find(t => t.conversation_id === selectedThread.id);
+              const hasReport = matchingTicket || selectedThread.handoffSummary || selectedThread.status === "escalated" || selectedThread.status === "pending_handoff" || selectedThread.status === "manual_override";
+              if (!hasReport) return null;
+
+              return (
+                <div style={{ border: '1px solid rgba(193, 73, 90, 0.3)', borderRadius: '6px', padding: '14px', background: 'rgba(193, 73, 90, 0.06)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 className="metadata-section-title" style={{ color: 'var(--garnet)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                      <AlertTriangle size={12} /> Human Handoff Report
+                    </h4>
+                    {matchingTicket && (
+                      <span style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(193, 73, 90, 0.2)', color: 'var(--garnet)', borderRadius: '3px', fontWeight: 600 }}>
+                        URGENCY: {Math.round((matchingTicket.urgency || 0.8) * 100)}%
+                      </span>
+                    )}
+                  </div>
+
+                  {matchingTicket?.reason && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 600 }}>
+                      Reason: {matchingTicket.reason}
+                    </div>
+                  )}
+
+                  <div className="handoff-summary-text" style={{ fontSize: '0.8rem', color: 'var(--text-1)' }}>
+                    <MarkdownText text={matchingTicket?.summary || selectedThread.handoffSummary || "Escalated to care team for human resolution."} />
+                  </div>
+
+                  {matchingTicket?.recommended_action && (
+                    <div style={{ fontSize: '0.75rem', padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--hairline)', borderRadius: '4px', color: 'var(--text-2)' }}>
+                      <div style={{ color: 'var(--gold)', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Sparkles size={10} /> AI Recommended Action
+                      </div>
+                      {matchingTicket.recommended_action}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* LangSmith Trace Inspector Button */}
-            <div style={{ marginBottom: '24px' }}>
-              <button
-                onClick={() => setShowTraceModal(true)}
-                style={{
-                  width: '100%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 14px',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%)',
-                  color: 'var(--accent-purple)',
-                  border: '1px solid rgba(139, 92, 246, 0.3)',
-                  borderRadius: '8px',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <MessageCircle size={16} /> View LangSmith Audit Trace
-              </button>
-            </div>
+              );
+            })()}
 
             {/* Auditor Checklogs */}
             <div>
               <h4 className="metadata-section-title">Auditing Verifications</h4>
-              <div className="audit-log-scroller">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {selectedThread.failedChecks && selectedThread.failedChecks.length > 0 && (
-                  <div className="audit-log-card failed-checks-card">
-                    <div style={{ fontWeight: 'bold', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <div style={{ padding: '8px 10px', background: 'rgba(193, 73, 90, 0.1)', border: '1px solid rgba(193, 73, 90, 0.3)', borderRadius: '4px', fontSize: '0.75rem', color: 'var(--garnet)' }}>
+                    <div style={{ fontWeight: '600', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <ShieldAlert size={12} /> FAILED VIOLATION
                     </div>
                     {selectedThread.failedChecks.map((fc, i) => (
@@ -450,7 +442,7 @@ export default function Inspector({ conversations, onReply }) {
                   </div>
                 )}
                 {selectedThread.auditLogs.map((log, index) => (
-                  <div key={index} className="audit-log-card">
+                  <div key={index} style={{ padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--hairline)', borderRadius: '4px', fontSize: '0.75rem', color: 'var(--text-2)', fontFamily: 'var(--font-data)' }}>
                     {log}
                   </div>
                 ))}
@@ -458,113 +450,12 @@ export default function Inspector({ conversations, onReply }) {
             </div>
 
           </div>
-        </div>
+        </>
       ) : (
-        <div className="glass-panel empty-state" style={{ height: '100%', display: 'flex', justifyContent: 'center' }}>
-          <MessageSquare />
-          <h2>No Conversation Selected</h2>
-          <p>Click on any thread in the sidebar to review the conversation log and audit trace.</p>
-        </div>
-      )}
-
-      {/* LangSmith Audit Trace Modal Overlay */}
-      {showTraceModal && selectedThread && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#FFF',
-            borderRadius: '16px',
-            maxWidth: '650px',
-            width: '100%',
-            padding: '24px 28px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-            border: '1px solid var(--border-color)',
-            maxHeight: '85vh',
-            overflowY: 'auto'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #E5E7EB', paddingBottom: '12px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MessageCircle style={{ color: 'var(--accent-purple)' }} /> LangSmith Trace Inspection
-                </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#6B7280' }}>
-                  Run ID: <code style={{ background: '#F3F4F6', padding: '2px 6px', borderRadius: '4px' }}>{selectedThread.metadata?.trace_id || `tr_ls_${selectedThread.id}`}</code>
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowTraceModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#9CA3AF' }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ flex: 1, background: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: '0.7rem', color: '#6B7280', fontWeight: 600 }}>LATENCY</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
-                  {selectedThread.metadata?.latency_ms ? `${selectedThread.metadata.latency_ms} ms` : '1,850 ms'}
-                </div>
-              </div>
-              <div style={{ flex: 1, background: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: '0.7rem', color: '#6B7280', fontWeight: 600 }}>CRM SYNC</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-                  {selectedThread.metadata?.crm_synced !== false ? '✅ HubSpot Synced' : '⚠️ Pending'}
-                </div>
-              </div>
-              <div style={{ flex: 1, background: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: '0.7rem', color: '#6B7280', fontWeight: 600 }}>CONFIDENCE</div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-purple)' }}>
-                  99.4%
-                </div>
-              </div>
-            </div>
-
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#374151' }}>Agent Execution Trace Steps</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {(selectedThread.metadata?.trace_steps || [
-                { step: "Intent Classification", detail: `Routed to '${selectedThread.intent}' (Confidence: 99.4%)` },
-                { step: "Tool Execution", detail: "Executed RAG lookup & catalog query" },
-                { step: "CRM Integration", detail: `Contact updated: ${selectedThread.phoneNumber}` },
-                { step: "Guardrail Check", detail: "Passed brand guidelines and zero-hallucination verification" }
-              ]).map((st, idx) => (
-                <div key={idx} style={{ padding: '12px 14px', background: '#F3F4F6', borderRadius: '8px', borderLeft: '4px solid var(--accent-purple)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1F2937' }}>{idx + 1}. {st.step}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#4B5563', marginTop: '2px' }}>{st.detail}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ marginTop: '24px', textAlign: 'right' }}>
-              <button
-                onClick={() => setShowTraceModal(false)}
-                style={{
-                  padding: '8px 18px',
-                  background: '#1F2937',
-                  color: '#FFF',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Close Trace Inspection
-              </button>
-            </div>
-          </div>
+        <div className="panel empty-state" style={{ gridColumn: '2 / 4', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}>
+          <MessageSquare size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+          <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)', fontSize: '1.2rem', marginBottom: '4px' }}>No Conversation Selected</h2>
+          <p style={{ fontSize: '0.85rem' }}>Select a thread from the sidebar to review logs and audit trace.</p>
         </div>
       )}
     </div>

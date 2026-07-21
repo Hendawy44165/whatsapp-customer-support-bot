@@ -353,7 +353,7 @@ export const getAnalyticsSummary = (conversationsList) => {
       totalOutput += c.tokens.output || 0;
     }
     totalCost += c.cost || 0;
-    if (c.status === "escalated" || c.status === "pending_handoff") totalEscalated++;
+    if (c.status === "escalated" || c.status === "pending_handoff" || c.status === "manual_override" || c.status === "handed_off") totalEscalated++;
     if (c.status === "purchased") {
       totalPurchased++;
       totalResolved++;

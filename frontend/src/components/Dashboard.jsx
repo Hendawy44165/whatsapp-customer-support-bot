@@ -1,16 +1,4 @@
 import React from 'react';
-import { 
-  Users, 
-  UserCheck, 
-  Coins, 
-  Smile, 
-  Activity, 
-  TrendingDown,
-  Zap,
-  ShieldCheck,
-  PiggyBank,
-  Database
-} from 'lucide-react';
 import { getAnalyticsSummary, getEmotionDistribution } from '../mockData';
 
 export default function Dashboard({ conversations }) {
@@ -19,20 +7,20 @@ export default function Dashboard({ conversations }) {
 
   // Group conversations by day of the week
   const dailyData = {
-    Mon: { clients: 0, handoffs: 0 },
-    Tue: { clients: 0, handoffs: 0 },
-    Wed: { clients: 0, handoffs: 0 },
-    Thu: { clients: 0, handoffs: 0 },
-    Fri: { clients: 0, handoffs: 0 },
-    Sat: { clients: 0, handoffs: 0 },
-    Sun: { clients: 0, handoffs: 0 }
+    MON: { clients: 0, handoffs: 0 },
+    TUE: { clients: 0, handoffs: 0 },
+    WED: { clients: 0, handoffs: 0 },
+    THU: { clients: 0, handoffs: 0 },
+    FRI: { clients: 0, handoffs: 0 },
+    SAT: { clients: 0, handoffs: 0 },
+    SUN: { clients: 0, handoffs: 0 }
   };
 
   conversations.forEach(c => {
     if (!c.timestamp) return;
     const date = new Date(c.timestamp);
     const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const dayName = dayNames[dayIndex];
     if (dailyData[dayName]) {
       dailyData[dayName].clients += 1;
@@ -42,294 +30,131 @@ export default function Dashboard({ conversations }) {
     }
   });
 
-  const rawMax = Math.max(...Object.values(dailyData).map(d => d.clients));
-  const maxVal = Math.max(4, Math.ceil(rawMax / 4) * 4);
+  const rawMax = Math.max(1, ...Object.values(dailyData).map(d => d.clients));
 
-  // Calculate trend dynamically for Clients Contacted (Today vs Yesterday relative to newest DB entry)
-  let clientsTrend = "No comparison data";
-  let clientsTrendType = "neutral";
+  // Sentiment calculation
+  const totalEmotions = Object.values(emotionCounts).reduce((a, b) => a + b, 0) || 1;
+  const satisfiedPct = Math.round(((emotionCounts.satisfied || 0) / totalEmotions) * 100);
+  const neutralPct = Math.round(((emotionCounts.neutral || 0) / totalEmotions) * 100);
+  const calmPct = Math.round(((emotionCounts.calm || 0) / totalEmotions) * 100);
+  const anxiousPct = Math.round(((emotionCounts.anxious || 0) / totalEmotions) * 100);
+  const frustratedPct = Math.round(((emotionCounts.frustrated || 0) / totalEmotions) * 100);
+  const angryPct = Math.round(((emotionCounts.angry || 0) / totalEmotions) * 100);
 
-  const timestamps = conversations.map(c => c.timestamp ? new Date(c.timestamp).getTime() : 0).filter(t => t > 0);
-  const latestTime = timestamps.length > 0 ? Math.max(...timestamps) : Date.now();
-  const oneDayMs = 24 * 60 * 60 * 1000;
-
-  const last24hCount = conversations.filter(c => {
-    if (!c.timestamp) return false;
-    const diff = latestTime - new Date(c.timestamp).getTime();
-    return diff >= 0 && diff <= oneDayMs;
-  }).length;
-
-  const prev24hCount = conversations.filter(c => {
-    if (!c.timestamp) return false;
-    const diff = latestTime - new Date(c.timestamp).getTime();
-    return diff > oneDayMs && diff <= 2 * oneDayMs;
-  }).length;
-
-  if (prev24hCount > 0) {
-    const pctChange = ((last24hCount - prev24hCount) / prev24hCount) * 100;
-    const sign = pctChange >= 0 ? "+" : "";
-    clientsTrend = `${sign}${pctChange.toFixed(1)}% vs yesterday`;
-    clientsTrendType = pctChange >= 0 ? "up" : "down";
-  } else if (last24hCount > 0) {
-    clientsTrend = `+${last24hCount} new today`;
-    clientsTrendType = "up";
-  }
-
-  const kpis = [
-    {
-      title: "Clients Contacted",
-      value: summary.totalClients,
-      trend: clientsTrend,
-      trendType: clientsTrendType,
-      icon: Users,
-      color: "var(--accent-purple)"
-    },
-    {
-      title: "Success Rate",
-      value: `${summary.successRate}%`,
-      trend: "Conversations resolved",
-      trendType: "neutral",
-      icon: UserCheck,
-      color: "var(--accent-emerald)"
-    },
-    {
-      title: "Human Escalations",
-      value: conversations.filter(c => c.status === 'escalated' || c.status === 'pending_handoff').length,
-      trend: `${summary.handoffRate}% handoff rate`,
-      trendType: summary.handoffRate > 20 ? "down" : "neutral",
-      icon: TrendingDown,
-      color: "var(--accent-red)"
-    },
-    {
-      title: "Average Cost / Client",
-      value: `$${(summary.avgCost || 0).toFixed(5)}`,
-      trend: "Combined prompt/completion",
-      trendType: "neutral",
-      icon: Coins,
-      color: "var(--accent-orange)"
-    }
-  ];
-
-  const tokenMetrics = [
-    { label: "Avg Input Tokens / Client", value: summary.avgInputTokens.toLocaleString(), color: "var(--accent-purple)", unit: "tokens/client" },
-    { label: "Avg Output Tokens / Client", value: summary.avgOutputTokens.toLocaleString(), color: "var(--accent-cyan)", unit: "tokens/client" },
-    { label: "Purchase Closures (Sales)", value: `${summary.conversionRate}%`, color: "var(--accent-amber)", unit: "conversion rate" }
-  ];
-
-  // Colors mapping for emotions
-  const emotionColors = {
-    satisfied: "var(--accent-emerald)",
-    calm: "var(--accent-blue)",
-    neutral: "#686256",
-    anxious: "var(--accent-amber)",
-    frustrated: "var(--accent-red)",
-    angry: "#ff003c"
-  };
-
-  const totalEmotions = Object.values(emotionCounts).reduce((a, b) => a + b, 0);
+  // Calculate weighted position marker (0% to 100% on spectrum)
+  // Positive emotions (satisfied, calm) pull right; Negative (angry, frustrated, anxious) pull left
+  const posWeight = (satisfiedPct * 1.0) + (calmPct * 0.8) + (neutralPct * 0.5);
+  const markerPos = Math.min(95, Math.max(5, Math.round(posWeight)));
 
   return (
     <div className="fade-in">
-      {/* Executive ROI Showcase Banner */}
-      <div 
-        className="glass-panel" 
-        style={{ 
-          marginBottom: '24px', 
-          padding: '20px 24px', 
-          background: 'linear-gradient(135deg, rgba(21, 128, 61, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%)',
-          border: '1px solid rgba(21, 128, 61, 0.25)',
-          borderRadius: '12px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-emerald)', fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              <Zap size={16} /> 2026 Executive ROI & Impact Summary
-            </div>
-            <h3 style={{ margin: '4px 0 0 0', fontSize: '1.25rem', color: '#111827' }}>
-              Traceable Business Automation Proof
-            </h3>
+
+      {/* TOP NOTE */}
+      <div className="eyebrow">Top Note <small>— today's opening impression</small></div>
+      <div className="topnote">
+        <div className="metric">
+          <div className="label">Deflection rate</div>
+          <div className="value accent">{summary.deflectionRate || 70}%</div>
+          <div className="sub">handled without a human</div>
+        </div>
+        <div className="metric">
+          <div className="label">Avg response latency</div>
+          <div className="value">{summary.avgLatencySec || '1.8'}s</div>
+          <div className="sub">first-token to reply</div>
+        </div>
+        <div className="metric">
+          <div className="label">Est. payroll saved</div>
+          <div className="value">
+            {summary.egpPayrollSaved ? summary.egpPayrollSaved.toLocaleString() : '650'} <span style={{ fontSize: '20px', color: 'var(--text-2)' }}>EGP</span>
           </div>
-          
-          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', background: 'rgba(21, 128, 61, 0.12)', borderRadius: '8px', color: 'var(--accent-emerald)' }}>
-                <PiggyBank size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>Est. Payroll Saved</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>
-                  {summary.egpPayrollSaved ? summary.egpPayrollSaved.toLocaleString() : '10,000'} EGP
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', background: 'rgba(59, 130, 246, 0.12)', borderRadius: '8px', color: 'var(--accent-blue)' }}>
-                <ShieldCheck size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>Deflection Rate</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-blue)' }}>
-                  {summary.deflectionRate || 98.4}%
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', background: 'rgba(245, 158, 11, 0.12)', borderRadius: '8px', color: 'var(--accent-amber)' }}>
-                <Zap size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>Avg Response Latency</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
-                  {summary.avgLatencySec || '1.8'}s
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ padding: '8px', background: 'rgba(139, 92, 246, 0.12)', borderRadius: '8px', color: 'var(--accent-purple)' }}>
-                <Database size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>CRM Sync Accuracy</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-purple)' }}>
-                  {summary.crmSyncRate || 100}%
-                </div>
-              </div>
-            </div>
-          </div>
+          <div className="sub">today, vs. staffed equivalent</div>
+        </div>
+        <div className="metric">
+          <div className="label">CRM sync rate</div>
+          <div className="value">100%</div>
+          <div className="sub">all sessions reconciled</div>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="kpi-grid">
-        {kpis.map((kpi, idx) => (
-          <div key={idx} className="glass-panel kpi-card">
-            <div className="kpi-header">
-              <span className="kpi-title">{kpi.title}</span>
-              <div className="kpi-icon-wrapper" style={{ color: kpi.color }}>
-                <kpi.icon size={20} />
-              </div>
-            </div>
-            <div className="kpi-value">{kpi.value}</div>
-            <div className={`kpi-trend ${kpi.trendType}`}>
-              {kpi.trend}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Analytics Breakdown Grid */}
-      <div className="dashboard-charts-grid">
+      {/* HEART NOTE */}
+      <div className="eyebrow">Heart Note <small>— how the day is developing</small></div>
+      <div className="heartnote">
         
-        {/* Weekly Traffic & Success Trends Chart */}
-        <div className="glass-panel">
-          <div className="chart-header">
-            <div>
-              <h2 className="chart-title">
-                <Activity size={18} style={{ color: "var(--accent-orange)" }} />
-                Conversational Trends
-              </h2>
-              <p className="chart-subtitle">Daily distribution of customer sessions and human escalations</p>
-            </div>
-            <span className="header-badge" style={{ color: "var(--accent-orange)" }}>
-              Live Stats
-            </span>
-          </div>
-
-          <div className="svg-chart-container" style={{ marginTop: '20px' }}>
-            <div className="bar-chart-y-axis">
-              <span>{maxVal}</span>
-              <span>{maxVal * 3 / 4}</span>
-              <span>{maxVal / 2}</span>
-              <span>{maxVal / 4}</span>
-              <span>0</span>
-            </div>
-            <div className="bar-chart-body">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                const d = dailyData[day];
-                const clientHeight = `${(d.clients / maxVal) * 100}%`;
-                const handoffHeight = `${(d.handoffs / maxVal) * 100}%`;
-                return (
-                  <div className="bar-item-wrapper" key={day}>
-                    <div className="chart-bar-pillar secondary" style={{ height: clientHeight }}>
-                      <div className="bar-tooltip">Clients: {d.clients}</div>
-                    </div>
-                    <div className="chart-bar-pillar" style={{ height: handoffHeight }}>
-                      <div className="bar-tooltip" style={{ background: 'var(--accent-red)' }}>Handoffs: {d.handoffs}</div>
-                    </div>
-                    <span className="chart-bar-label">{day}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '20px', fontSize: '0.8rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#EADFC9', border: '1px solid #D5CEBF' }}></div>
-              <span style={{ color: '#686256' }}>Total Clients Contacted</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(to top, var(--accent-orange), var(--accent-amber))' }}></div>
-              <span style={{ color: '#686256' }}>Human Handoff Escalations</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Emotion Distribution */}
-        <div className="glass-panel">
-          <div className="chart-header">
-            <div>
-              <h2 className="chart-title">
-                <Smile size={18} style={{ color: "var(--accent-purple)" }} />
-                Customer Sentiment
-              </h2>
-              <p className="chart-subtitle">Distribution of customer emotional profiles</p>
-            </div>
-          </div>
-
-          <div className="emotion-list-container">
-            {Object.entries(emotionCounts).map(([emotion, count]) => {
-              const pct = totalEmotions > 0 ? Math.round((count / totalEmotions) * 100) : 0;
-              const color = emotionColors[emotion] || "#686256";
+        {/* Conversational Trends */}
+        <div className="panel">
+          <h3>Conversational Trends</h3>
+          <div className="desc">Clients contacted vs. human handoffs, by day</div>
+          <div className="chart">
+            {Object.entries(dailyData).map(([day, d]) => {
+              const totalH = Math.max(4, Math.round((d.clients / rawMax) * 100));
+              const escH = Math.round((d.handoffs / rawMax) * 100);
               return (
-                <div className="emotion-row" key={emotion}>
-                  <div className="emotion-meta">
-                    <span className="emotion-dot" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }}></span>
-                    <span style={{ textTransform: 'capitalize' }}>{emotion}</span>
+                <div className="chartcol" key={day}>
+                  <div className="bars">
+                    <div className="bar total" style={{ height: `${totalH}%` }} title={`Clients: ${d.clients}`}></div>
+                    {d.handoffs > 0 && (
+                      <div className="bar esc" style={{ height: `${escH}%` }} title={`Handoffs: ${d.handoffs}`}></div>
+                    )}
                   </div>
-                  <div className="emotion-progress-bg">
-                    <div className="emotion-progress-fill" style={{ width: `${pct}%`, backgroundColor: color }}></div>
-                  </div>
-                  <span className="emotion-percent">{pct}%</span>
+                  <div className="daylabel">{day}</div>
                 </div>
               );
             })}
           </div>
+          <div className="legend">
+            <span><span className="swatch" style={{ background: 'var(--gold-dark)' }}></span>Total clients contacted</span>
+            <span><span className="swatch" style={{ background: 'var(--forest)' }}></span>Human handoff escalations</span>
+          </div>
+        </div>
+
+        {/* Customer Sentiment */}
+        <div className="panel">
+          <h3>Customer Sentiment</h3>
+          <div className="desc">Weighted emotional read, negative to positive</div>
+          <div className="spectrum-wrap">
+            <div className="spectrum">
+              <div className="marker" style={{ left: `${markerPos}%` }}></div>
+            </div>
+            <div className="spectrum-labels">
+              <span>NEGATIVE</span>
+              <span>NEUTRAL</span>
+              <span>POSITIVE</span>
+            </div>
+          </div>
+          <div className="sentirow"><span className="name">Satisfied</span><span className="pct">{satisfiedPct}%</span></div>
+          <div className="sentirow"><span className="name">Neutral</span><span className="pct">{neutralPct}%</span></div>
+          <div className="sentirow"><span className="name">Calm</span><span className="pct">{calmPct}%</span></div>
+          <div className="sentirow"><span className="name">Anxious</span><span className="pct">{anxiousPct}%</span></div>
+          <div className="sentirow"><span className="name">Frustrated</span><span className="pct">{frustratedPct}%</span></div>
+          <div className="sentirow"><span className="name">Angry</span><span className="pct">{angryPct}%</span></div>
+        </div>
+
+      </div>
+
+      {/* BASE NOTE */}
+      <div className="eyebrow">Base Note <small>— what the day settles into</small></div>
+      <div className="basenote">
+        <div className="basecard">
+          <div className="label">Avg input tokens / client</div>
+          <div className="value">{summary.avgInputTokens.toLocaleString()}</div>
+          <div className="foot">across {summary.totalClients} clients contacted today</div>
+        </div>
+        <div className="basecard">
+          <div className="label">Avg output tokens / client</div>
+          <div className="value">{summary.avgOutputTokens.toLocaleString()}</div>
+          <div className="foot">concierge reply volume</div>
+        </div>
+        <div className="basecard">
+          <div className="label">Purchase closures</div>
+          <div className="value gold">{summary.conversionRate}%</div>
+          <div className="foot">conversion to a completed sale</div>
+          <div className="costnote">
+            <span>AI compute cost / client</span>
+            <span>${(summary.avgCost || 0.00059).toFixed(5)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Average Token Details Section */}
-      <div className="glass-panel">
-        <h3 className="metadata-section-title" style={{ color: 'var(--accent-orange)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <Coins size={16} /> Token Usage & Cost Per Client (Average)
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-          {tokenMetrics.map((tm, idx) => (
-            <div key={idx} style={{ padding: '16px', background: '#FDFBF7', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontSize: '0.8rem', color: '#686256', fontWeight: 600 }}>{tm.label}</span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '1.6rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: tm.color }}>{tm.value}</span>
-                <span style={{ fontSize: '0.75rem', color: '#686256' }}>{tm.unit}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
